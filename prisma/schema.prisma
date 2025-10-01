@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  roles     String[] @default([])
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actor     String
+  action    String
+  entity    String
+  entityId  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model Template {
+  id            String   @id @default(cuid())
+  name          String
+  type          String
+  activeVersion Int
+  versions      Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Track {
+  id              String   @id @default(cuid())
+  name            String
+  steps           Json     @default("[]")
+  assignedUserIds String[] @default([])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Ticket {
+  id            String   @id @default(cuid())
+  subject       String
+  requesterEmail String
+  status        String
+  createdAt     DateTime @default(now())
+}
+
+model Article {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  content   String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model Job {
+  id        String   @id @default(cuid())
+  title     String
+  company   String
+  location  String
+  status    String
+  createdAt DateTime @default(now())
+}
+
+
+
