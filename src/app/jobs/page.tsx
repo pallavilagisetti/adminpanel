@@ -6,116 +6,216 @@ type Job = {
   title: string
   company: string
   location: string
-  status: 'pending' | 'approved' | 'rejected'
+  salary: string
+  type: 'Full-time' | 'Part-time' | 'Contract'
+  status: 'Active' | 'Paused' | 'Closed'
+  applications: number
+  postedDate: string
 }
 
+type NewJob = Omit<Job, 'id' | 'applications' | 'postedDate'>
+
 export default function JobsPage() {
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [filter, setFilter] = useState<'All' | 'Pending' | 'Approved' | 'Rejected'>('All')
-  const [activeCount, setActiveCount] = useState(0)
+  const [jobs, setJobs] = useState<Job[]>([
+    {
+      id: '1',
+      title: 'Senior React Developer',
+      company: 'TechCorp Inc.',
+      location: 'Remote',
+      salary: '$120k - $160k',
+      type: 'Full-time',
+      status: 'Active',
+      applications: 45,
+      postedDate: '2024-03-20'
+    },
+    {
+      id: '2',
+      title: 'Data Scientist',
+      company: 'DataFlow Labs',
+      location: 'New York, NY',
+      salary: '$130k - $180k',
+      type: 'Full-time',
+      status: 'Active',
+      applications: 32,
+      postedDate: '2024-03-18'
+    },
+    {
+      id: '3',
+      title: 'Product Manager',
+      company: 'StartupXYZ',
+      location: 'San Francisco, CA',
+      salary: '$140k - $200k',
+      type: 'Full-time',
+      status: 'Paused',
+      applications: 67,
+      postedDate: '2024-03-15'
+    }
+  ])
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newJob, setNewJob] = useState<NewJob>({
+    title: '',
+    company: '',
+    location: '',
+    salary: '',
+    type: 'Full-time',
+    status: 'Active'
+  })
+  const [activeCount, setActiveCount] = useState(1247)
   const [applications, setApplications] = useState(8942)
   const [avgSalary, setAvgSalary] = useState('$142k')
   const [remotePct, setRemotePct] = useState(68)
 
-  useEffect(() => {
-    fetch('/api/jobs').then(r => r.json()).then(d => {
-      setJobs(d.jobs)
-      const active = d.jobs.filter((j: Job) => j.status === 'approved').length
-      setActiveCount(active)
-    })
-  }, [])
-
-  const filtered = useMemo(() => {
-    if (filter === 'All') return jobs
-    const map: Record<string, Job['status']> = { Pending: 'pending', Approved: 'approved', Rejected: 'rejected' }
-    return jobs.filter(j => j.status === map[filter])
-  }, [jobs, filter])
-
-  const approve = async (job: Job) => {
-    const res = await fetch(`/api/jobs/${job.id}/approve`, { method: 'POST' })
-    if (res.ok) {
-      const { job: updated } = await res.json()
-      setJobs(prev => prev.map(j => j.id === updated.id ? updated : j))
+  const addJob = () => {
+    if (!newJob.title || !newJob.company || !newJob.location || !newJob.salary) {
+      alert('Please fill in all required fields')
+      return
     }
+
+    const job: Job = {
+      ...newJob,
+      id: Date.now().toString(),
+      applications: 0,
+      postedDate: new Date().toISOString().split('T')[0]
+    }
+
+    setJobs(prev => [job, ...prev])
+    setNewJob({
+      title: '',
+      company: '',
+      location: '',
+      salary: '',
+      type: 'Full-time',
+      status: 'Active'
+    })
+    setShowAddModal(false)
   }
 
-  const reject = async (job: Job) => {
-    const res = await fetch(`/api/jobs/${job.id}/reject`, { method: 'POST' })
-    if (res.ok) {
-      const { job: updated } = await res.json()
-      setJobs(prev => prev.map(j => j.id === updated.id ? updated : j))
-    }
+  const updateJobStatus = (jobId: string, newStatus: Job['status']) => {
+    setJobs(prev => prev.map(job => 
+      job.id === jobId ? { ...job, status: newStatus } : job
+    ))
+  }
+
+  const deleteJob = (jobId: string) => {
+    setJobs(prev => prev.filter(job => job.id !== jobId))
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <section className="card p-6">
+        <h1 className="text-3xl font-bold">Jobs Management</h1>
+        <p className="text-[var(--text-secondary)] mt-1">Manage job postings and track applications</p>
+      </section>
+
       {/* KPI tiles */}
       <div className="grid md:grid-cols-4 gap-4">
-        <div className="metric-card p-6">
-          <div className="text-sm text-[var(--text-secondary)]">Active Jobs</div>
-          <div className="mt-2 text-3xl font-bold">{activeCount.toLocaleString()}</div>
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <span className="text-blue-400">📋</span>
+            </div>
+            <div className="text-sm text-[var(--text-secondary)]">Active Jobs</div>
+          </div>
+          <div className="text-3xl font-bold">{activeCount.toLocaleString()}</div>
           <div className="mt-1 text-xs text-green-400">+67 this week</div>
         </div>
-        <div className="metric-card p-6">
-          <div className="text-sm text-[var(--text-secondary)]">Applications</div>
-          <div className="mt-2 text-3xl font-bold">{applications.toLocaleString()}</div>
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+              <span className="text-green-400">⏰</span>
+            </div>
+            <div className="text-sm text-[var(--text-secondary)]">Applications</div>
+          </div>
+          <div className="text-3xl font-bold">{applications.toLocaleString()}</div>
           <div className="mt-1 text-xs text-green-400">+234 today</div>
         </div>
-        <div className="metric-card p-6">
-          <div className="text-sm text-[var(--text-secondary)]">Avg Salary</div>
-          <div className="mt-2 text-3xl font-bold">{avgSalary}</div>
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
+              <span className="text-yellow-400">💰</span>
+            </div>
+            <div className="text-sm text-[var(--text-secondary)]">Avg Salary</div>
+          </div>
+          <div className="text-3xl font-bold">{avgSalary}</div>
           <div className="mt-1 text-xs text-green-400">+8.2% vs last quarter</div>
         </div>
-        <div className="metric-card p-6">
-          <div className="text-sm text-[var(--text-secondary)]">Remote Jobs</div>
-          <div className="mt-2 text-3xl font-bold">{remotePct}%</div>
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <span className="text-purple-400">📍</span>
+            </div>
+            <div className="text-sm text-[var(--text-secondary)]">Remote Jobs</div>
+          </div>
+          <div className="text-3xl font-bold">{remotePct}%</div>
           <div className="mt-1 text-xs text-[var(--text-secondary)]">847 remote positions</div>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Job Ingestion</h1>
-          <p className="text-[var(--text-secondary)] mt-1">Moderate incoming jobs and manage matching</p>
+          <h2 className="text-xl font-semibold">Job Listings</h2>
+          <p className="text-[var(--text-secondary)] text-sm">All active and managed job postings</p>
         </div>
-        <select value={filter} onChange={e => setFilter(e.target.value as any)} className="input-field">
-          <option>All</option>
-          <option>Pending</option>
-          <option>Approved</option>
-          <option>Rejected</option>
-        </select>
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+        >
+          <span>+</span> Add Job
+        </button>
       </div>
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
-            <thead className="bg-[var(--border)]">
+            <thead className="bg-white/5 border-b border-white/10">
               <tr>
-                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Title</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Job Title</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Company</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Location</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Salary</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Type</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Status</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Applications</th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border)]">
-              {filtered.map(j => (
-                <tr key={j.id} className="hover:bg-[var(--border)]/50 transition-colors">
-                  <td className="px-6 py-4">{j.title}</td>
-                  <td className="px-6 py-4">{j.company}</td>
-                  <td className="px-6 py-4">{j.location}</td>
+            <tbody className="divide-y divide-white/10">
+              {jobs.map(job => (
+                <tr key={job.id} className="hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      j.status === 'approved' ? 'bg-green-100 text-green-800' : j.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                    <div>
+                      <div className="font-medium">{job.title}</div>
+                      <div className="text-xs text-[var(--text-secondary)]">Posted {job.postedDate}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">{job.company}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm">📍</span>
+                      {job.location}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 font-medium">{job.salary}</td>
+                  <td className="px-6 py-4">{job.type}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                      job.status === 'Active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 
+                      job.status === 'Paused' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' : 
+                      'bg-red-500/20 text-red-400 border border-red-500/30'
                     }`}>
-                      {j.status}
+                      {job.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex gap-2 justify-end">
-                      <button onClick={() => approve(j)} disabled={j.status !== 'pending'} className="px-3 py-1.5 rounded-md bg-green-500 enabled:hover:bg-green-600 disabled:opacity-50 text-white text-xs">Approve</button>
-                      <button onClick={() => reject(j)} disabled={j.status !== 'pending'} className="px-3 py-1.5 rounded-md bg-red-500 enabled:hover:bg-red-600 disabled:opacity-50 text-white text-xs">Reject</button>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium">
+                      {job.applications}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                      <span className="text-lg">✏️</span>
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -123,6 +223,110 @@ export default function JobsPage() {
           </table>
         </div>
       </div>
+
+      {/* Add Job Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--card-bg)] border border-white/10 rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Add New Job</h3>
+              <button 
+                onClick={() => setShowAddModal(false)}
+                className="text-[var(--text-secondary)] hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Job Title *</label>
+                <input
+                  type="text"
+                  value={newJob.title}
+                  onChange={(e) => setNewJob(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="e.g. Senior React Developer"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Company *</label>
+                <input
+                  type="text"
+                  value={newJob.company}
+                  onChange={(e) => setNewJob(prev => ({ ...prev, company: e.target.value }))}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="e.g. TechCorp Inc."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Location *</label>
+                <input
+                  type="text"
+                  value={newJob.location}
+                  onChange={(e) => setNewJob(prev => ({ ...prev, location: e.target.value }))}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="e.g. Remote or New York, NY"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Salary Range *</label>
+                <input
+                  type="text"
+                  value={newJob.salary}
+                  onChange={(e) => setNewJob(prev => ({ ...prev, salary: e.target.value }))}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:border-blue-500 focus:outline-none"
+                  placeholder="e.g. $120k - $160k"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Job Type</label>
+                <select
+                  value={newJob.type}
+                  onChange={(e) => setNewJob(prev => ({ ...prev, type: e.target.value as Job['type'] }))}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="Full-time">Full-time</option>
+                  <option value="Part-time">Part-time</option>
+                  <option value="Contract">Contract</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Status</label>
+                <select
+                  value={newJob.status}
+                  onChange={(e) => setNewJob(prev => ({ ...prev, status: e.target.value as Job['status'] }))}
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Paused">Paused</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="flex-1 px-4 py-2 border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addJob}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              >
+                Add Job
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
