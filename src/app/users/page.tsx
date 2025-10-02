@@ -3,18 +3,16 @@ import { useEffect, useMemo, useState } from 'react'
 
 type User = {
   id: string
-  name: string
+  name: string | null
   email: string
-  signupMethod: 'Google' | 'Email'
-  profileType: 'Resume' | 'Manual'
+  roles: string[]
   active: boolean
 }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [query, setQuery] = useState('')
-  const [signup, setSignup] = useState<'All' | 'Google' | 'Email'>('All')
-  const [profile, setProfile] = useState<'All' | 'Resume' | 'Manual'>('All')
+  const [roleFilter, setRoleFilter] = useState<'All' | 'admin' | 'user' | 'moderator'>('All')
   const [sortKey, setSortKey] = useState<'name' | 'email'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [loading, setLoading] = useState(true)
@@ -27,20 +25,22 @@ export default function UsersPage() {
   }, [])
 
   const filtered = useMemo(() => {
-    let list = users.filter(u => u.name.toLowerCase().includes(query.toLowerCase()) || u.email.toLowerCase().includes(query.toLowerCase()))
-    if (signup !== 'All') list = list.filter(u => u.signupMethod === signup)
-    if (profile !== 'All') list = list.filter(u => u.profileType === profile)
+    let list = users.filter(u => 
+      (u.name?.toLowerCase().includes(query.toLowerCase()) ?? false) || 
+      u.email.toLowerCase().includes(query.toLowerCase())
+    )
+    if (roleFilter !== 'All') list = list.filter(u => u.roles.includes(roleFilter))
     list = [...list].sort((a, b) => {
-      const va = a[sortKey].toString().toLowerCase()
-      const vb = b[sortKey].toString().toLowerCase()
+      const va = (a[sortKey] || '').toString().toLowerCase()
+      const vb = (b[sortKey] || '').toString().toLowerCase()
       return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
     })
     return list
-  }, [users, query, signup, profile, sortKey, sortDir])
+  }, [users, query, roleFilter, sortKey, sortDir])
 
   const totalUsers = users.length
   const activeUsers = users.filter(u => u.active).length
-  const proUsers = users.filter(u => u.profileType === 'Resume').length
+  const adminUsers = users.filter(u => u.roles.includes('admin')).length
   const suspended = users.filter(u => !u.active).length
 
   const toggleActive = async (user: User) => {
@@ -73,9 +73,9 @@ export default function UsersPage() {
           <div className="mt-1 text-xs text-green-400">{totalUsers ? Math.round((activeUsers/totalUsers)*100) : 0}% of total</div>
         </div>
         <div className="metric-card p-6">
-          <div className="text-sm text-[var(--text-secondary)]">Pro Users</div>
-          <div className="mt-2 text-3xl font-bold">{proUsers.toLocaleString()}</div>
-          <div className="mt-1 text-xs text-[var(--text-secondary)]">conversion rate</div>
+          <div className="text-sm text-[var(--text-secondary)]">Admin Users</div>
+          <div className="mt-2 text-3xl font-bold">{adminUsers.toLocaleString()}</div>
+          <div className="mt-1 text-xs text-[var(--text-secondary)]">privileged accounts</div>
         </div>
         <div className="metric-card p-6">
           <div className="text-sm text-[var(--text-secondary)]">Suspended</div>
@@ -111,15 +111,11 @@ export default function UsersPage() {
                 className="input-field pl-10 w-full sm:w-64" 
               />
             </div>
-            <select value={signup} onChange={e => setSignup(e.target.value as any)} className="input-field">
-              <option>All Signup Methods</option>
-              <option>Google</option>
-              <option>Email</option>
-            </select>
-            <select value={profile} onChange={e => setProfile(e.target.value as any)} className="input-field">
-              <option>All Profile Types</option>
-              <option>Resume</option>
-              <option>Manual</option>
+            <select value={roleFilter} onChange={e => setRoleFilter(e.target.value as any)} className="input-field">
+              <option value="All">All Roles</option>
+              <option value="admin">Admin</option>
+              <option value="user">User</option>
+              <option value="moderator">Moderator</option>
             </select>
           </div>
           <div className="flex gap-2">
@@ -146,9 +142,8 @@ export default function UsersPage() {
             <thead className="bg-[var(--border)]">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">User</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Contact</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Signup</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Profile</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Email</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Roles</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Status</th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Actions</th>
               </tr>
@@ -159,10 +154,10 @@ export default function UsersPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-[var(--accent)] rounded-full flex items-center justify-center text-white font-medium">
-                        {u.name.split(' ').map(n => n[0]).join('')}
+                        {(u.name || u.email).split(' ').map(n => n[0]).join('').toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-medium text-[var(--text-primary)]">{u.name}</div>
+                        <div className="font-medium text-[var(--text-primary)]">{u.name || 'No Name'}</div>
                         <div className="text-sm text-[var(--text-secondary)]">ID: {u.id}</div>
                       </div>
                     </div>
@@ -171,22 +166,17 @@ export default function UsersPage() {
                     <div className="text-[var(--text-primary)]">{u.email}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      u.signupMethod === 'Google' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {u.signupMethod}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      u.profileType === 'Resume' 
-                        ? 'bg-purple-100 text-purple-800' 
-                        : 'bg-orange-100 text-orange-800'
-                    }`}>
-                      {u.profileType}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {u.roles.length > 0 ? u.roles.map(role => (
+                        <span key={role} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {role}
+                        </span>
+                      )) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          No roles
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
