@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 
 type QueryParams = {
   page?: string
@@ -17,11 +18,11 @@ export async function GET(request: Request) {
   const sort = (searchParams.get('sort') as 'name' | 'email') || 'name'
   const dir = (searchParams.get('dir') as 'asc' | 'desc') || 'asc'
 
-  const where = q
+  const where: Prisma.UserWhereInput = q
     ? {
         OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { email: { contains: q, mode: 'insensitive' } },
+          { name: { contains: q, mode: Prisma.QueryMode.insensitive } },
+          { email: { contains: q, mode: Prisma.QueryMode.insensitive } },
         ],
       }
     : {}
