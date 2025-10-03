@@ -150,7 +150,7 @@ export default function AISettingsPage() {
               min={setting.min}
               max={setting.max}
               step={setting.step}
-              value={setting.value}
+              value={Number(setting.value)}
               onChange={(e) => updateSetting(setting.id, parseFloat(e.target.value))}
               className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
             />
@@ -174,7 +174,7 @@ export default function AISettingsPage() {
       case 'select':
         return (
           <select
-            value={setting.value}
+            value={String(setting.value)}
             onChange={(e) => updateSetting(setting.id, e.target.value)}
             className="input-field"
           >
@@ -189,7 +189,7 @@ export default function AISettingsPage() {
         return (
           <input
             type="number"
-            value={setting.value}
+            value={Number(setting.value)}
             onChange={(e) => updateSetting(setting.id, parseInt(e.target.value))}
             className="input-field"
           />

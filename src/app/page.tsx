@@ -1,7 +1,16 @@
 "use client"
 import Link from 'next/link'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function HomePage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    router.prefetch('/users')
+    router.prefetch('/ai-settings')
+    router.prefetch('/system-health')
+  }, [router])
   const generateReport = () => {
     // Generate overall admin panel status report
     const reportData = {
@@ -146,11 +155,11 @@ STATUS: All systems operational
         <h2 className="text-xl font-semibold">Quick Actions</h2>
         <p className="text-[var(--text-secondary)] text-sm">Frequently used admin tasks</p>
         <div className="mt-4 grid md:grid-cols-4 gap-4">
-          <Link href="/users" className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group">
+          <Link prefetch href="/users" className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group">
             <div className="font-medium group-hover:text-[var(--accent)] transition-colors">View All Users</div>
             <div className="text-xs text-[var(--text-secondary)]">Manage user accounts</div>
           </Link>
-          <Link href="/ai-settings" className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group">
+          <Link prefetch href="/ai-settings" className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group">
             <div className="font-medium group-hover:text-[var(--accent)] transition-colors">AI Settings</div>
             <div className="text-xs text-[var(--text-secondary)]">Configure algorithms</div>
           </Link>
@@ -158,7 +167,7 @@ STATUS: All systems operational
             <div className="font-medium group-hover:text-[var(--accent)] transition-colors">Generate Report</div>
             <div className="text-xs text-[var(--text-secondary)]">Export analytics</div>
           </button>
-          <Link href="/system-health" className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group">
+          <Link prefetch href="/system-health" className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group">
             <div className="font-medium group-hover:text-[var(--accent)] transition-colors">System Health</div>
             <div className="text-xs text-[var(--text-secondary)]">Check performance</div>
           </Link>
