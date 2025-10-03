@@ -1,4 +1,66 @@
+"use client"
+import Link from 'next/link'
+
 export default function HomePage() {
+  const generateReport = () => {
+    // Generate overall admin panel status report
+    const reportData = {
+      timestamp: new Date().toISOString(),
+      totalUsers: 12847,
+      activeUsers: 11523,
+      totalResumes: 8492,
+      skillsAnalyzed: 45320,
+      monthlyRevenue: 89420,
+      systemHealth: {
+        aiProcessing: 98,
+        database: 95,
+        apiResponse: 87,
+        userSatisfaction: 94
+      },
+      recentActivity: [
+        { action: 'User Registration', count: 45, time: '2 hours ago' },
+        { action: 'Resume Upload', count: 23, time: '3 hours ago' },
+        { action: 'Skill Analysis', count: 89, time: '4 hours ago' },
+        { action: 'Job Recommendations', count: 156, time: '5 hours ago' }
+      ]
+    }
+    
+    // Create downloadable report
+    const reportContent = `
+ADMIN PANEL STATUS REPORT
+Generated: ${new Date().toLocaleString()}
+
+OVERVIEW:
+- Total Users: ${reportData.totalUsers.toLocaleString()}
+- Active Users: ${reportData.activeUsers.toLocaleString()} (${Math.round((reportData.activeUsers/reportData.totalUsers)*100)}%)
+- Active Resumes: ${reportData.totalResumes.toLocaleString()}
+- Skills Analyzed: ${reportData.skillsAnalyzed.toLocaleString()}
+- Monthly Revenue: $${reportData.monthlyRevenue.toLocaleString()}
+
+SYSTEM HEALTH:
+- AI Processing: ${reportData.systemHealth.aiProcessing}%
+- Database: ${reportData.systemHealth.database}%
+- API Response: ${reportData.systemHealth.apiResponse}%
+- User Satisfaction: ${reportData.systemHealth.userSatisfaction}%
+
+RECENT ACTIVITY:
+${reportData.recentActivity.map(activity => `- ${activity.action}: ${activity.count} events (${activity.time})`).join('\n')}
+
+STATUS: All systems operational
+    `
+    
+    // Download the report
+    const blob = new Blob([reportContent], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `admin-report-${new Date().toISOString().split('T')[0]}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="grid gap-6">
       {/* Header */}
@@ -84,17 +146,22 @@ export default function HomePage() {
         <h2 className="text-xl font-semibold">Quick Actions</h2>
         <p className="text-[var(--text-secondary)] text-sm">Frequently used admin tasks</p>
         <div className="mt-4 grid md:grid-cols-4 gap-4">
-          {[
-            { title: 'View All Users', desc: 'Manage user accounts' },
-            { title: 'AI Settings', desc: 'Configure algorithms' },
-            { title: 'Generate Report', desc: 'Export analytics' },
-            { title: 'System Health', desc: 'Check performance' },
-          ].map((a, i) => (
-            <div key={i} className="bg-white/5 border border-white/10 rounded-md p-4">
-              <div className="font-medium">{a.title}</div>
-              <div className="text-xs text-[var(--text-secondary)]">{a.desc}</div>
-            </div>
-          ))}
+          <Link href="/users" className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group">
+            <div className="font-medium group-hover:text-[var(--accent)] transition-colors">View All Users</div>
+            <div className="text-xs text-[var(--text-secondary)]">Manage user accounts</div>
+          </Link>
+          <Link href="/ai-settings" className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group">
+            <div className="font-medium group-hover:text-[var(--accent)] transition-colors">AI Settings</div>
+            <div className="text-xs text-[var(--text-secondary)]">Configure algorithms</div>
+          </Link>
+          <button onClick={generateReport} className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group text-left">
+            <div className="font-medium group-hover:text-[var(--accent)] transition-colors">Generate Report</div>
+            <div className="text-xs text-[var(--text-secondary)]">Export analytics</div>
+          </button>
+          <Link href="/system-health" className="bg-white/5 border border-white/10 rounded-md p-4 hover:bg-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer group">
+            <div className="font-medium group-hover:text-[var(--accent)] transition-colors">System Health</div>
+            <div className="text-xs text-[var(--text-secondary)]">Check performance</div>
+          </Link>
         </div>
       </section>
     </div>
