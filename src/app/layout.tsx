@@ -1,7 +1,7 @@
 import './globals.css'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { SignInOut } from './components/SignInOut'
+
 
 export const metadata = {
   title: 'Upstar Admin Dashboard',
