@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server'
 
 // Middleware currently disabled - no authentication integration active
 export async function middleware(req: NextRequest) {
-  // Allow all requests to pass through
   return NextResponse.next()
 }
 

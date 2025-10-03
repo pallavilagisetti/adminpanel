@@ -64,6 +64,8 @@ export default function JobsPage() {
   const [applications, setApplications] = useState(8942)
   const [avgSalary, setAvgSalary] = useState('$142k')
   const [remotePct, setRemotePct] = useState(68)
+  const [actionJob, setActionJob] = useState<Job | null>(null)
+  const [showAction, setShowAction] = useState<string | null>(null)
 
   const addJob = () => {
     if (!newJob.title || !newJob.company || !newJob.location || !newJob.salary) {
@@ -99,6 +101,10 @@ export default function JobsPage() {
   const deleteJob = (jobId: string) => {
     setJobs(prev => prev.filter(job => job.id !== jobId))
   }
+
+  const pauseJob = (jobId: string) => updateJobStatus(jobId, 'Paused')
+  const activateJob = (jobId: string) => updateJobStatus(jobId, 'Active')
+  const closeJob = (jobId: string) => updateJobStatus(jobId, 'Closed')
 
   return (
     <div className="space-y-6">
@@ -212,10 +218,29 @@ export default function JobsPage() {
                       {job.applications}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                      <span className="text-lg">✏️</span>
+                  <td className="px-6 py-4 text-right relative">
+                    <button 
+                      onClick={() => setShowAction(showAction === job.id ? null : job.id)}
+                      className="px-2 py-1.5 border border-white/10 rounded-md hover:bg-white/10 text-sm"
+                    >
+                      Actions ▾
                     </button>
+                    {showAction === job.id && (
+                      <div className="absolute right-6 mt-2 w-52 bg-[var(--card-bg)] border border-white/10 rounded-md shadow-lg z-20">
+                        <button onClick={() => { setActionJob(job); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">View details</button>
+                        {job.status !== 'Active' && (
+                          <button onClick={() => { activateJob(job.id); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">Activate</button>
+                        )}
+                        {job.status === 'Active' && (
+                          <button onClick={() => { pauseJob(job.id); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">Pause</button>
+                        )}
+                        {job.status !== 'Closed' && (
+                          <button onClick={() => { closeJob(job.id); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">Close</button>
+                        )}
+                        <div className="h-px bg-white/10" />
+                        <button onClick={() => { deleteJob(job.id); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm text-red-300">Delete</button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -223,6 +248,65 @@ export default function JobsPage() {
           </table>
         </div>
       </div>
+
+      {/* Job Details Modal */}
+      {actionJob && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setActionJob(null)}>
+          <div className="bg-[var(--card-bg)] border border-white/10 rounded-lg p-6 w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Job Details</h3>
+              <button onClick={() => setActionJob(null)} className="text-[var(--text-secondary)] hover:text-white">✕</button>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <div className="text-[var(--text-secondary)]">Title</div>
+                <div className="font-medium">{actionJob.title}</div>
+              </div>
+              <div>
+                <div className="text-[var(--text-secondary)]">Company</div>
+                <div className="font-medium">{actionJob.company}</div>
+              </div>
+              <div>
+                <div className="text-[var(--text-secondary)]">Location</div>
+                <div className="font-medium">{actionJob.location}</div>
+              </div>
+              <div>
+                <div className="text-[var(--text-secondary)]">Type</div>
+                <div className="font-medium">{actionJob.type}</div>
+              </div>
+              <div>
+                <div className="text-[var(--text-secondary)]">Salary</div>
+                <div className="font-medium">{actionJob.salary}</div>
+              </div>
+              <div>
+                <div className="text-[var(--text-secondary)]">Status</div>
+                <div className="font-medium">{actionJob.status}</div>
+              </div>
+              <div>
+                <div className="text-[var(--text-secondary)]">Applications</div>
+                <div className="font-medium">{actionJob.applications}</div>
+              </div>
+              <div>
+                <div className="text-[var(--text-secondary)]">Posted</div>
+                <div className="font-medium">{actionJob.postedDate}</div>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-2 justify-end">
+              {actionJob.status !== 'Active' && (
+                <button onClick={() => { activateJob(actionJob.id); setActionJob(null) }} className="px-3 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm">Activate</button>
+              )}
+              {actionJob.status === 'Active' && (
+                <button onClick={() => { pauseJob(actionJob.id); setActionJob(null) }} className="px-3 py-2 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white text-sm">Pause</button>
+              )}
+              {actionJob.status !== 'Closed' && (
+                <button onClick={() => { closeJob(actionJob.id); setActionJob(null) }} className="px-3 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white text-sm">Close</button>
+              )}
+              <button onClick={() => { deleteJob(actionJob.id); setActionJob(null) }} className="px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm">Delete</button>
+              <button onClick={() => setActionJob(null)} className="px-3 py-2 rounded-md border border-white/10 text-sm">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Job Modal */}
       {showAddModal && (

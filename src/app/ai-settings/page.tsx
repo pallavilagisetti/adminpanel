@@ -1,5 +1,7 @@
 "use client"
 import { useState } from 'react'
+import ModelStatusSection from './ModelStatusSection'
+import BehaviorCustomizationSection from './BehaviorCustomizationSection'
 
 interface AISetting {
   id: string
@@ -269,27 +271,11 @@ export default function AISettingsPage() {
         ))}
       </div>
 
-      {/* Model Status */}
-      <section className="card p-6">
-        <h2 className="text-xl font-semibold mb-4">Model Status</h2>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="bg-white/5 rounded-lg p-4">
-            <div className="text-sm text-[var(--text-secondary)]">Current Model</div>
-            <div className="mt-2 text-2xl font-bold text-[var(--text-primary)]">v2.1</div>
-            <div className="mt-1 text-xs text-green-400">Latest version</div>
-          </div>
-          <div className="bg-white/5 rounded-lg p-4">
-            <div className="text-sm text-[var(--text-secondary)]">Training Accuracy</div>
-            <div className="mt-2 text-2xl font-bold text-[var(--text-primary)]">94.2%</div>
-            <div className="mt-1 text-xs text-green-400">+2.1% vs v2.0</div>
-          </div>
-          <div className="bg-white/5 rounded-lg p-4">
-            <div className="text-sm text-[var(--text-secondary)]">Processing Speed</div>
-            <div className="mt-2 text-2xl font-bold text-[var(--text-primary)]">127ms</div>
-            <div className="mt-1 text-xs text-green-400">Average response time</div>
-          </div>
-        </div>
-      </section>
+      {/* AI Model Status (editable summary) */}
+      <ModelStatusSection />
+
+      {/* AI Behavior Customization (like screenshot) */}
+      <BehaviorCustomizationSection />
     </div>
   )
 }

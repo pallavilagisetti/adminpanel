@@ -1,13 +1,14 @@
 import './globals.css'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { SignInOut } from './components/SignInOut'
 
 export const metadata = {
   title: 'Upstar Admin Dashboard',
   description: 'Internal admin panel for user and skill management',
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className="min-h-screen">
