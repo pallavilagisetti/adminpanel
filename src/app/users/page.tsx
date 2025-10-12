@@ -1,6 +1,7 @@
 "use client"
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 type User = {
   id: string
@@ -17,6 +18,7 @@ type User = {
 
 export default function UsersPage() {
   const router = useRouter()
+  const { user: adminUser } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'All Status' | 'Active' | 'Inactive' | 'Suspended'>('All Status')
@@ -25,7 +27,10 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [dropdownPosition, setDropdownPosition] = useState<'above' | 'below'>('below')
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Sample data matching the image
   const sampleUsers: User[] = [
@@ -85,10 +90,32 @@ export default function UsersPage() {
     setLoading(false)
   }, [])
 
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedQuery(query)
+    }, 300)
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [query])
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      const isClickInsideAnyDropdown = Object.values(dropdownRefs.current).some(ref => 
+        ref && ref.contains(target)
+      )
+      
+      if (!isClickInsideAnyDropdown) {
         setOpenDropdown(null)
       }
     }
@@ -101,8 +128,8 @@ export default function UsersPage() {
 
   const filtered = useMemo(() => {
     let list = users.filter(u => 
-      (u.name?.toLowerCase().includes(query.toLowerCase()) ?? false) || 
-      u.email.toLowerCase().includes(query.toLowerCase())
+      (u.name?.toLowerCase().includes(debouncedQuery.toLowerCase()) ?? false) || 
+      u.email.toLowerCase().includes(debouncedQuery.toLowerCase())
     )
     if (statusFilter !== 'All Status') list = list.filter(u => u.status === statusFilter)
     list = [...list].sort((a, b) => {
@@ -111,7 +138,7 @@ export default function UsersPage() {
       return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
     })
     return list
-  }, [users, query, statusFilter, sortKey, sortDir])
+  }, [users, debouncedQuery, statusFilter, sortKey, sortDir])
 
   const totalUsers = users.length
   const activeUsers = users.filter(u => u.status === 'Active').length
@@ -153,25 +180,49 @@ export default function UsersPage() {
     }
   }
 
-  const handleDropdownAction = (action: string, user: User) => {
+  const handleDropdownAction = async (action: string, user: User) => {
     setOpenDropdown(null)
+    setActionLoading(`${action}-${user.id}`)
     
-    switch (action) {
-      case 'view-profile':
-        router.push(`/users/${user.id}`)
-        break
-      case 'login-as-user':
-        router.push(`/users/${user.id}/login`)
-        break
-      case 'send-message':
-        // Open email client with user's email
-        window.location.href = `mailto:${user.email}?subject=Message from SkillGraph AI Admin`
-        break
-      case 'suspend-account':
-        handleSuspendAccount(user)
-        break
-      default:
-        break
+    try {
+      switch (action) {
+        case 'view-profile':
+          router.push(`/users/${user.id}`)
+          break
+        case 'login-as-user':
+          router.push(`/users/${user.id}/login`)
+          break
+        case 'send-message':
+          // Open email client with user's email and admin context
+          const adminEmail = adminUser?.email || 'admin@skillgraph.ai'
+          const adminName = adminUser?.displayName || 'Admin'
+          const subject = `Message from ${adminName} (SkillGraph AI Admin)`
+          const body = `Hello ${user.name || 'User'},
+
+This message is being sent to you from the SkillGraph AI Admin Panel.
+
+Best regards,
+${adminName}
+Admin - SkillGraph AI`
+          
+          window.location.href = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+          break
+        case 'suspend-account':
+          await handleSuspendAccount(user)
+          break
+        case 'activate-account':
+          await handleActivateAccount(user)
+          break
+        case 'deactivate-account':
+          await handleDeactivateAccount(user)
+          break
+        default:
+          break
+      }
+    } catch (error) {
+      console.error(`Error performing action ${action}:`, error)
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -191,6 +242,46 @@ export default function UsersPage() {
       } catch (error) {
         console.error('Error suspending account:', error)
         alert('Failed to suspend account. Please try again.')
+      }
+    }
+  }
+
+  const handleActivateAccount = async (user: User) => {
+    const confirmed = window.confirm(`Are you sure you want to activate ${user.name}'s account?`)
+    if (confirmed) {
+      try {
+        // Update user status to active
+        setUsers(prev => prev.map(u => 
+          u.id === user.id 
+            ? { ...u, status: 'Active' as const, active: true }
+            : u
+        ))
+        
+        // Show success message
+        alert(`${user.name}'s account has been activated successfully.`)
+      } catch (error) {
+        console.error('Error activating account:', error)
+        alert('Failed to activate account. Please try again.')
+      }
+    }
+  }
+
+  const handleDeactivateAccount = async (user: User) => {
+    const confirmed = window.confirm(`Are you sure you want to deactivate ${user.name}'s account?`)
+    if (confirmed) {
+      try {
+        // Update user status to inactive
+        setUsers(prev => prev.map(u => 
+          u.id === user.id 
+            ? { ...u, status: 'Inactive' as const, active: false }
+            : u
+        ))
+        
+        // Show success message
+        alert(`${user.name}'s account has been deactivated successfully.`)
+      } catch (error) {
+        console.error('Error deactivating account:', error)
+        alert('Failed to deactivate account. Please try again.')
       }
     }
   }
@@ -368,7 +459,12 @@ export default function UsersPage() {
                     <div className="text-sm text-[var(--text-primary)]">{u.resumes}</div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="relative" ref={dropdownRef}>
+                    <div 
+                      className="relative" 
+                      ref={(el) => {
+                        dropdownRefs.current[u.id] = el
+                      }}
+                    >
                       <button 
                         onClick={(e) => handleDropdownToggle(u.id, e)}
                         className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-1 rounded-md hover:bg-[var(--border)]/50"
@@ -379,46 +475,122 @@ export default function UsersPage() {
                       </button>
                       
                       {openDropdown === u.id && (
-                        <div className={`absolute right-0 z-50 w-48 bg-[var(--card)] border border-[var(--border)] rounded-md shadow-lg ${
+                        <div className={`absolute right-0 z-[100] w-48 bg-[var(--card)] border border-[var(--border)] rounded-md shadow-lg ${
                           dropdownPosition === 'above' ? 'bottom-8' : 'top-8'
                         }`}>
                           <div className="py-1">
                             <button
-                              onClick={() => handleDropdownAction('view-profile', u)}
-                              className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--border)]/50 flex items-center gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDropdownAction('view-profile', u)
+                              }}
+                              disabled={actionLoading === `view-profile-${u.id}`}
+                              className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--border)]/50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
+                              {actionLoading === `view-profile-${u.id}` ? (
+                                <div className="w-4 h-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent"></div>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                              )}
                               View Profile
                             </button>
                             <button
-                              onClick={() => handleDropdownAction('login-as-user', u)}
-                              className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--border)]/50 flex items-center gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDropdownAction('login-as-user', u)
+                              }}
+                              disabled={actionLoading === `login-as-user-${u.id}`}
+                              className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--border)]/50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                              </svg>
+                              {actionLoading === `login-as-user-${u.id}` ? (
+                                <div className="w-4 h-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent"></div>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                                </svg>
+                              )}
                               Login as User
                             </button>
                             <button
-                              onClick={() => handleDropdownAction('send-message', u)}
-                              className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--border)]/50 flex items-center gap-2"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDropdownAction('send-message', u)
+                              }}
+                              disabled={actionLoading === `send-message-${u.id}`}
+                              className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--border)]/50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                              </svg>
+                              {actionLoading === `send-message-${u.id}` ? (
+                                <div className="w-4 h-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent"></div>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                </svg>
+                              )}
                               Send Message
                             </button>
-                            <button
-                              onClick={() => handleDropdownAction('suspend-account', u)}
-                              className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-                              </svg>
-                              Suspend Account
-                            </button>
+                            
+                            {/* Status change buttons based on current status */}
+                            {u.status === 'Active' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDropdownAction('deactivate-account', u)
+                                }}
+                                disabled={actionLoading === `deactivate-account-${u.id}`}
+                                className="w-full text-left px-4 py-2 text-sm text-orange-500 hover:bg-orange-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {actionLoading === `deactivate-account-${u.id}` ? (
+                                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                                  </svg>
+                                )}
+                                Deactivate Account
+                              </button>
+                            )}
+                            
+                            {(u.status === 'Inactive' || u.status === 'Suspended') && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDropdownAction('activate-account', u)
+                                }}
+                                disabled={actionLoading === `activate-account-${u.id}`}
+                                className="w-full text-left px-4 py-2 text-sm text-green-500 hover:bg-green-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {actionLoading === `activate-account-${u.id}` ? (
+                                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                                Activate Account
+                              </button>
+                            )}
+                            
+                            {u.status !== 'Suspended' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDropdownAction('suspend-account', u)
+                                }}
+                                disabled={actionLoading === `suspend-account-${u.id}`}
+                                className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {actionLoading === `suspend-account-${u.id}` ? (
+                                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></div>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                                  </svg>
+                                )}
+                                Suspend Account
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
