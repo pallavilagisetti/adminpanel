@@ -100,6 +100,40 @@ export default function UserProfilePage() {
     }
   }
 
+  const handleActivateAccount = async () => {
+    if (!user) return
+    
+    const confirmed = window.confirm(`Are you sure you want to activate ${user.name}'s account?`)
+    if (confirmed) {
+      try {
+        // Here you would make an API call to activate the account
+        console.log(`Account activated for: ${user.name}`)
+        alert(`${user.name}'s account has been activated successfully.`)
+        router.push('/users')
+      } catch (error) {
+        console.error('Error activating account:', error)
+        alert('Failed to activate account. Please try again.')
+      }
+    }
+  }
+
+  const handleDeactivateAccount = async () => {
+    if (!user) return
+    
+    const confirmed = window.confirm(`Are you sure you want to deactivate ${user.name}'s account?`)
+    if (confirmed) {
+      try {
+        // Here you would make an API call to deactivate the account
+        console.log(`Account deactivated for: ${user.name}`)
+        alert(`${user.name}'s account has been deactivated successfully.`)
+        router.push('/users')
+      } catch (error) {
+        console.error('Error deactivating account:', error)
+        alert('Failed to deactivate account. Please try again.')
+      }
+    }
+  }
+
   const handleSendMessage = () => {
     if (!user) return
     window.location.href = `mailto:${user.email}?subject=Message from SkillGraph AI Admin`
@@ -210,18 +244,12 @@ export default function UserProfilePage() {
       {/* Actions */}
       <div className="card p-6">
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Actions</h3>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button 
             onClick={handleSendMessage}
             className="btn-primary"
           >
             Send Message
-          </button>
-          <button 
-            onClick={handleSuspendAccount}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-          >
-            Suspend Account
           </button>
           <Link 
             href={`/users/${user.id}/login`}
@@ -229,6 +257,34 @@ export default function UserProfilePage() {
           >
             Login as User
           </Link>
+          
+          {/* Status change buttons based on current status */}
+          {user.status === 'Active' && (
+            <button 
+              onClick={handleDeactivateAccount}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Deactivate Account
+            </button>
+          )}
+          
+          {(user.status === 'Inactive' || user.status === 'Suspended') && (
+            <button 
+              onClick={handleActivateAccount}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Activate Account
+            </button>
+          )}
+          
+          {user.status !== 'Suspended' && (
+            <button 
+              onClick={handleSuspendAccount}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Suspend Account
+            </button>
+          )}
         </div>
       </div>
     </div>

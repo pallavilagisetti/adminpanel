@@ -93,8 +93,8 @@ export default function LoginAsUserPage() {
       // Here you would implement the actual login as user functionality
       console.log(`Logging in as user: ${user.name}`)
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Simulate API call with faster response
+      await new Promise(resolve => setTimeout(resolve, 500))
       
       // In a real app, you would redirect to the user's dashboard
       alert(`Successfully logged in as ${user.name}. You are now viewing the platform from their perspective.`)
