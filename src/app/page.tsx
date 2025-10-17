@@ -1,20 +1,22 @@
 "use client"
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function HomePage() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is logged in
-    const savedUser = localStorage.getItem('admin-user')
-    if (!savedUser) {
-      router.push('/login')
-    } else {
-      setLoading(false)
+    if (!authLoading) {
+      if (!user) {
+        router.push('/login')
+      } else {
+        setLoading(false)
+      }
     }
-  }, [router])
+  }, [user, authLoading, router])
 
   const handleGenerateReport = () => {
     // Generate comprehensive analytics report
@@ -193,7 +195,7 @@ export default function HomePage() {
     URL.revokeObjectURL(url)
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
@@ -204,13 +206,22 @@ export default function HomePage() {
     )
   }
 
+  if (!user) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text-primary)]">
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <div>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-sm text-[var(--text-secondary)] mt-2">
+              Welcome back, {user.name}! ({user.role})
+            </p>
+          </div>
           <div className="text-sm text-[var(--text-secondary)]">
-            Welcome to SkillGraph AI Admin Panel
+            SkillGraph AI Admin Panel
           </div>
         </div>
 

@@ -1,5 +1,7 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
+import { ReadOnlyButton } from '@/components/ReadOnlyIndicator'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Job = {
   id: string
@@ -16,6 +18,7 @@ type Job = {
 type NewJob = Omit<Job, 'id' | 'applications' | 'postedDate'>
 
 export default function JobsPage() {
+  const { canWrite } = useAuth()
   const [jobs, setJobs] = useState<Job[]>([
     {
       id: '1',
@@ -163,12 +166,13 @@ export default function JobsPage() {
           <h2 className="text-xl font-semibold">Job Listings</h2>
           <p className="text-[var(--text-secondary)] text-sm">All active and managed job postings</p>
         </div>
-        <button 
+        <ReadOnlyButton 
           onClick={() => setShowAddModal(true)}
+          permission="jobs:write"
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <span>+</span> Add Job
-        </button>
+        </ReadOnlyButton>
       </div>
 
       <div className="card overflow-hidden">
@@ -229,16 +233,16 @@ export default function JobsPage() {
                       <div className="absolute right-6 mt-2 w-52 bg-[var(--card-bg)] border border-white/10 rounded-md shadow-lg z-20">
                         <button onClick={() => { setActionJob(job); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">View details</button>
                         {job.status !== 'Active' && (
-                          <button onClick={() => { activateJob(job.id); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">Activate</button>
+                          <ReadOnlyButton onClick={() => { activateJob(job.id); setShowAction(null) }} permission="jobs:write" className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">Activate</ReadOnlyButton>
                         )}
                         {job.status === 'Active' && (
-                          <button onClick={() => { pauseJob(job.id); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">Pause</button>
+                          <ReadOnlyButton onClick={() => { pauseJob(job.id); setShowAction(null) }} permission="jobs:write" className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">Pause</ReadOnlyButton>
                         )}
                         {job.status !== 'Closed' && (
-                          <button onClick={() => { closeJob(job.id); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">Close</button>
+                          <ReadOnlyButton onClick={() => { closeJob(job.id); setShowAction(null) }} permission="jobs:write" className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm">Close</ReadOnlyButton>
                         )}
                         <div className="h-px bg-white/10" />
-                        <button onClick={() => { deleteJob(job.id); setShowAction(null) }} className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm text-red-300">Delete</button>
+                        <ReadOnlyButton onClick={() => { deleteJob(job.id); setShowAction(null) }} permission="jobs:write" className="w-full text-left px-3 py-2 hover:bg-white/5 text-sm text-red-300">Delete</ReadOnlyButton>
                       </div>
                     )}
                   </td>
@@ -293,15 +297,15 @@ export default function JobsPage() {
             </div>
             <div className="mt-6 flex flex-wrap gap-2 justify-end">
               {actionJob.status !== 'Active' && (
-                <button onClick={() => { activateJob(actionJob.id); setActionJob(null) }} className="px-3 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm">Activate</button>
+                <ReadOnlyButton onClick={() => { activateJob(actionJob.id); setActionJob(null) }} permission="jobs:write" className="px-3 py-2 rounded-md bg-green-600 hover:bg-green-700 text-white text-sm">Activate</ReadOnlyButton>
               )}
               {actionJob.status === 'Active' && (
-                <button onClick={() => { pauseJob(actionJob.id); setActionJob(null) }} className="px-3 py-2 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white text-sm">Pause</button>
+                <ReadOnlyButton onClick={() => { pauseJob(actionJob.id); setActionJob(null) }} permission="jobs:write" className="px-3 py-2 rounded-md bg-yellow-600 hover:bg-yellow-700 text-white text-sm">Pause</ReadOnlyButton>
               )}
               {actionJob.status !== 'Closed' && (
-                <button onClick={() => { closeJob(actionJob.id); setActionJob(null) }} className="px-3 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white text-sm">Close</button>
+                <ReadOnlyButton onClick={() => { closeJob(actionJob.id); setActionJob(null) }} permission="jobs:write" className="px-3 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white text-sm">Close</ReadOnlyButton>
               )}
-              <button onClick={() => { deleteJob(actionJob.id); setActionJob(null) }} className="px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm">Delete</button>
+              <ReadOnlyButton onClick={() => { deleteJob(actionJob.id); setActionJob(null) }} permission="jobs:write" className="px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white text-sm">Delete</ReadOnlyButton>
               <button onClick={() => setActionJob(null)} className="px-3 py-2 rounded-md border border-white/10 text-sm">Close</button>
             </div>
           </div>
@@ -401,12 +405,13 @@ export default function JobsPage() {
               >
                 Cancel
               </button>
-              <button
+              <ReadOnlyButton
                 onClick={addJob}
+                permission="jobs:write"
                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
               >
                 Add Job
-              </button>
+              </ReadOnlyButton>
             </div>
           </div>
         </div>

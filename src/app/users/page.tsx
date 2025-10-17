@@ -2,26 +2,25 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
+import ReadOnlyIndicator, { ReadOnlyButton } from '@/components/ReadOnlyIndicator'
 
 type User = {
   id: string
   name: string | null
   email: string
-  plan: 'Free' | 'Pro' | 'Enterprise'
-  status: 'Active' | 'Inactive' | 'Suspended'
-  joinedDate: string
-  lastActive: string
-  skills: number
-  resumes: number
   active: boolean
+  roles: string[]
+  createdAt: string
+  updatedAt: string
 }
+
 
 export default function UsersPage() {
   const router = useRouter()
-  const { user: adminUser } = useAuth()
+  const { isReadOnly, canWrite } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'All Status' | 'Active' | 'Inactive' | 'Suspended'>('All Status')
+  const [statusFilter, setStatusFilter] = useState<'All Status' | 'Active' | 'Inactive'>('All Status')
   const [sortKey, setSortKey] = useState<'name' | 'email'>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [loading, setLoading] = useState(true)
@@ -32,62 +31,28 @@ export default function UsersPage() {
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Sample data matching the image
-  const sampleUsers: User[] = [
-    {
-      id: '1',
-      name: 'Alice Johnson',
-      email: 'alice@example.com',
-      plan: 'Pro',
-      status: 'Active',
-      joinedDate: '2024-01-15',
-      lastActive: '2 hours ago',
-      skills: 24,
-      resumes: 3,
-      active: true
-    },
-    {
-      id: '2',
-      name: 'Bob Smith',
-      email: 'bob@example.com',
-      plan: 'Free',
-      status: 'Active',
-      joinedDate: '2024-02-20',
-      lastActive: '1 day ago',
-      skills: 12,
-      resumes: 1,
-      active: true
-    },
-    {
-      id: '3',
-      name: 'Carol Davis',
-      email: 'carol@example.com',
-      plan: 'Enterprise',
-      status: 'Inactive',
-      joinedDate: '2023-11-10',
-      lastActive: '1 week ago',
-      skills: 45,
-      resumes: 5,
-      active: false
-    },
-    {
-      id: '4',
-      name: 'David Wilson',
-      email: 'david@example.com',
-      plan: 'Pro',
-      status: 'Suspended',
-      joinedDate: '2024-03-05',
-      lastActive: '2 weeks ago',
-      skills: 18,
-      resumes: 2,
-      active: false
+  // Fetch users from API
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/users')
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch users')
+      }
+      
+      setUsers(data.users || [])
+    } catch (error) {
+      console.error('Error fetching users:', error)
+      setUsers([])
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   useEffect(() => {
-    // Use sample data for now
-    setUsers(sampleUsers)
-    setLoading(false)
+    fetchUsers()
   }, [])
 
   // Debounced search
@@ -131,7 +96,11 @@ export default function UsersPage() {
       (u.name?.toLowerCase().includes(debouncedQuery.toLowerCase()) ?? false) || 
       u.email.toLowerCase().includes(debouncedQuery.toLowerCase())
     )
-    if (statusFilter !== 'All Status') list = list.filter(u => u.status === statusFilter)
+    if (statusFilter !== 'All Status') {
+      list = list.filter(u => 
+        statusFilter === 'Active' ? u.active : !u.active
+      )
+    }
     list = [...list].sort((a, b) => {
       const va = (a[sortKey] || '').toString().toLowerCase()
       const vb = (b[sortKey] || '').toString().toLowerCase()
@@ -141,12 +110,20 @@ export default function UsersPage() {
   }, [users, debouncedQuery, statusFilter, sortKey, sortDir])
 
   const totalUsers = users.length
-  const activeUsers = users.filter(u => u.status === 'Active').length
-  const proUsers = users.filter(u => u.plan === 'Pro').length
-  const suspended = users.filter(u => u.status === 'Suspended').length
+  const activeUsers = users.filter(u => u.active).length
+  const adminUsers = users.filter(u => u.roles.includes('admin')).length
+  const inactiveUsers = users.filter(u => !u.active).length
 
-  const toggleActive = async (user: User) => {
-    const res = await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: user.id, active: !user.active }) })
+  const updateUserRoles = async (user: User, newRoles: string[]) => {
+    const res = await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: user.id, roles: newRoles }) })
+    if (res.ok) {
+      const { user: updated } = await res.json()
+      setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))
+    }
+  }
+
+  const updateUserStatus = async (user: User, active: boolean) => {
+    const res = await fetch('/api/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: user.id, active }) })
     if (res.ok) {
       const { user: updated } = await res.json()
       setUsers(prev => prev.map(u => u.id === updated.id ? updated : u))
@@ -180,6 +157,7 @@ export default function UsersPage() {
     }
   }
 
+
   const handleDropdownAction = async (action: string, user: User) => {
     setOpenDropdown(null)
     setActionLoading(`${action}-${user.id}`)
@@ -194,8 +172,8 @@ export default function UsersPage() {
           break
         case 'send-message':
           // Open email client with user's email and admin context
-          const adminEmail = adminUser?.email || 'admin@skillgraph.ai'
-          const adminName = adminUser?.displayName || 'Admin'
+          const adminEmail = 'admin@skillgraph.ai'
+          const adminName = 'Admin'
           const subject = `Message from ${adminName} (SkillGraph AI Admin)`
           const body = `Hello ${user.name || 'User'},
 
@@ -207,14 +185,17 @@ Admin - SkillGraph AI`
           
           window.location.href = `mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
           break
-        case 'suspend-account':
-          await handleSuspendAccount(user)
+        case 'make-admin':
+          await updateUserRoles(user, [...user.roles, 'admin'])
           break
-        case 'activate-account':
-          await handleActivateAccount(user)
+        case 'remove-admin':
+          await updateUserRoles(user, user.roles.filter(role => role !== 'admin'))
           break
-        case 'deactivate-account':
-          await handleDeactivateAccount(user)
+        case 'activate-user':
+          await updateUserStatus(user, true)
+          break
+        case 'deactivate-user':
+          await updateUserStatus(user, false)
           break
         default:
           break
@@ -226,65 +207,6 @@ Admin - SkillGraph AI`
     }
   }
 
-  const handleSuspendAccount = async (user: User) => {
-    const confirmed = window.confirm(`Are you sure you want to suspend ${user.name}'s account?`)
-    if (confirmed) {
-      try {
-        // Update user status to suspended
-        setUsers(prev => prev.map(u => 
-          u.id === user.id 
-            ? { ...u, status: 'Suspended' as const, active: false }
-            : u
-        ))
-        
-        // Show success message
-        alert(`${user.name}'s account has been suspended successfully.`)
-      } catch (error) {
-        console.error('Error suspending account:', error)
-        alert('Failed to suspend account. Please try again.')
-      }
-    }
-  }
-
-  const handleActivateAccount = async (user: User) => {
-    const confirmed = window.confirm(`Are you sure you want to activate ${user.name}'s account?`)
-    if (confirmed) {
-      try {
-        // Update user status to active
-        setUsers(prev => prev.map(u => 
-          u.id === user.id 
-            ? { ...u, status: 'Active' as const, active: true }
-            : u
-        ))
-        
-        // Show success message
-        alert(`${user.name}'s account has been activated successfully.`)
-      } catch (error) {
-        console.error('Error activating account:', error)
-        alert('Failed to activate account. Please try again.')
-      }
-    }
-  }
-
-  const handleDeactivateAccount = async (user: User) => {
-    const confirmed = window.confirm(`Are you sure you want to deactivate ${user.name}'s account?`)
-    if (confirmed) {
-      try {
-        // Update user status to inactive
-        setUsers(prev => prev.map(u => 
-          u.id === user.id 
-            ? { ...u, status: 'Inactive' as const, active: false }
-            : u
-        ))
-        
-        // Show success message
-        alert(`${user.name}'s account has been deactivated successfully.`)
-      } catch (error) {
-        console.error('Error deactivating account:', error)
-        alert('Failed to deactivate account. Please try again.')
-      }
-    }
-  }
 
   if (loading) {
     return (
@@ -308,8 +230,8 @@ Admin - SkillGraph AI`
           <div className="flex justify-between items-start">
             <div>
               <div className="text-sm text-[var(--text-secondary)]">Total Users</div>
-              <div className="mt-2 text-3xl font-bold">12,847</div>
-              <div className="mt-1 text-xs text-green-400">+12.5% from last month</div>
+              <div className="mt-2 text-3xl font-bold">{totalUsers.toLocaleString()}</div>
+              <div className="mt-1 text-xs text-green-400">All registered users</div>
             </div>
             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -322,8 +244,8 @@ Admin - SkillGraph AI`
           <div className="flex justify-between items-start">
             <div>
               <div className="text-sm text-[var(--text-secondary)]">Active Users</div>
-              <div className="mt-2 text-3xl font-bold">11,234</div>
-              <div className="mt-1 text-xs text-green-400">87.4% of total</div>
+              <div className="mt-2 text-3xl font-bold">{activeUsers.toLocaleString()}</div>
+              <div className="mt-1 text-xs text-green-400">{totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0}% of total</div>
             </div>
             <div className="w-8 h-8 border-2 border-green-500 rounded-full flex items-center justify-center">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -333,13 +255,13 @@ Admin - SkillGraph AI`
         <div className="metric-card p-6 relative">
           <div className="flex justify-between items-start">
             <div>
-              <div className="text-sm text-[var(--text-secondary)]">Pro Users</div>
-              <div className="mt-2 text-3xl font-bold">3,847</div>
-              <div className="mt-1 text-xs text-purple-400">29.9% conversion rate</div>
+              <div className="text-sm text-[var(--text-secondary)]">Admin Users</div>
+              <div className="mt-2 text-3xl font-bold">{adminUsers.toLocaleString()}</div>
+              <div className="mt-1 text-xs text-purple-400">{totalUsers > 0 ? Math.round((adminUsers / totalUsers) * 100) : 0}% admin rate</div>
             </div>
             <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
             </div>
           </div>
@@ -347,9 +269,9 @@ Admin - SkillGraph AI`
         <div className="metric-card p-6 relative">
           <div className="flex justify-between items-start">
             <div>
-              <div className="text-sm text-[var(--text-secondary)]">Suspended</div>
-              <div className="mt-2 text-3xl font-bold">89</div>
-              <div className="mt-1 text-xs text-red-400">0.7% of total</div>
+              <div className="text-sm text-[var(--text-secondary)]">Inactive Users</div>
+              <div className="mt-2 text-3xl font-bold">{inactiveUsers.toLocaleString()}</div>
+              <div className="mt-1 text-xs text-red-400">{totalUsers > 0 ? Math.round((inactiveUsers / totalUsers) * 100) : 0}% of total</div>
             </div>
             <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -364,6 +286,7 @@ Admin - SkillGraph AI`
       <div>
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">User Directory</h2>
         <p className="text-sm text-[var(--text-secondary)] mb-4">Search and filter through all user accounts.</p>
+        
         
         <div className="card p-6">
           <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
@@ -387,7 +310,6 @@ Admin - SkillGraph AI`
                   <option value="All Status">All Status</option>
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
-                  <option value="Suspended">Suspended</option>
                 </select>
               </div>
             </div>
@@ -397,16 +319,14 @@ Admin - SkillGraph AI`
 
       {/* Users Table */}
       <div className="card">
-        <div className="overflow-x-auto scrollbar-hide">
+          <div className="overflow-x-auto scrollbar-hide">
           <table className="min-w-full">
             <thead className="bg-[var(--border)]">
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">User</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Plan</th>
                 <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Status</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Activity</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Skills</th>
-                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Resumes</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Roles</th>
+                <th className="text-left px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Created</th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-[var(--text-primary)]">Actions</th>
               </tr>
             </thead>
@@ -426,37 +346,35 @@ Admin - SkillGraph AI`
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      u.plan === 'Pro' 
-                        ? 'bg-purple-100 text-purple-800' 
-                        : u.plan === 'Enterprise'
-                        ? 'bg-purple-200 text-purple-900'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {u.plan}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      u.status === 'Active' 
+                      u.active 
                         ? 'bg-green-100 text-green-800' 
-                        : u.status === 'Suspended'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
+                        : 'bg-red-100 text-red-800'
                     }`}>
-                      {u.status}
+                      {u.active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-[var(--text-primary)]">
-                      <div>Joined {u.joinedDate}</div>
-                      <div className="text-[var(--text-secondary)]">Active {u.lastActive}</div>
+                    <div className="flex flex-wrap gap-1">
+                      {u.roles.map((role, index) => (
+                        <span key={index} className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          role === 'admin' 
+                            ? 'bg-purple-100 text-purple-800' 
+                            : role === 'moderator'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {role}
+                        </span>
+                      ))}
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-[var(--text-primary)]">{u.skills}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-[var(--text-primary)]">{u.resumes}</div>
+                    <div className="text-sm text-[var(--text-primary)]">
+                      {new Date(u.createdAt).toLocaleDateString()}
+                    </div>
+                    <div className="text-xs text-[var(--text-secondary)]">
+                      {Math.floor((Date.now() - new Date(u.createdAt).getTime()) / (1000 * 60 * 60 * 24))} days ago
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div 
@@ -530,66 +448,107 @@ Admin - SkillGraph AI`
                               )}
                               Send Message
                             </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDropdownAction('upgrade-tier', u)
+                              }}
+                              disabled={actionLoading === `upgrade-tier-${u.id}`}
+                              className="w-full text-left px-4 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--border)]/50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {actionLoading === `upgrade-tier-${u.id}` ? (
+                                <div className="w-4 h-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent"></div>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                                </svg>
+                              )}
+                              Upgrade Tier
+                            </button>
                             
-                            {/* Status change buttons based on current status */}
-                            {u.status === 'Active' && (
-                              <button
+                            {/* Role management buttons */}
+                            {!u.roles.includes('admin') && (
+                            <ReadOnlyButton
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDropdownAction('make-admin', u)
+                              }}
+                              disabled={actionLoading === `make-admin-${u.id}`}
+                              permission="users:write"
+                              className="w-full text-left px-4 py-2 text-sm text-purple-500 hover:bg-purple-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {actionLoading === `make-admin-${u.id}` ? (
+                                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"></div>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                  </svg>
+                                )}
+                                Make Admin
+                              </ReadOnlyButton>
+                            )}
+                            
+                            {u.roles.includes('admin') && (
+                              <ReadOnlyButton
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleDropdownAction('deactivate-account', u)
+                                  handleDropdownAction('remove-admin', u)
                                 }}
-                                disabled={actionLoading === `deactivate-account-${u.id}`}
+                                disabled={actionLoading === `remove-admin-${u.id}`}
+                                permission="users:write"
+                                className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {actionLoading === `remove-admin-${u.id}` ? (
+                                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></div>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                )}
+                                Remove Admin
+                              </ReadOnlyButton>
+                            )}
+                            
+                            {u.active && (
+                              <ReadOnlyButton
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDropdownAction('deactivate-user', u)
+                                }}
+                                disabled={actionLoading === `deactivate-user-${u.id}`}
+                                permission="users:write"
                                 className="w-full text-left px-4 py-2 text-sm text-orange-500 hover:bg-orange-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                {actionLoading === `deactivate-account-${u.id}` ? (
+                                {actionLoading === `deactivate-user-${u.id}` ? (
                                   <div className="w-4 h-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
                                 ) : (
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
                                   </svg>
                                 )}
-                                Deactivate Account
-                              </button>
+                                Deactivate User
+                              </ReadOnlyButton>
                             )}
                             
-                            {(u.status === 'Inactive' || u.status === 'Suspended') && (
-                              <button
+                            {!u.active && (
+                              <ReadOnlyButton
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleDropdownAction('activate-account', u)
+                                  handleDropdownAction('activate-user', u)
                                 }}
-                                disabled={actionLoading === `activate-account-${u.id}`}
+                                disabled={actionLoading === `activate-user-${u.id}`}
+                                permission="users:write"
                                 className="w-full text-left px-4 py-2 text-sm text-green-500 hover:bg-green-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                {actionLoading === `activate-account-${u.id}` ? (
+                                {actionLoading === `activate-user-${u.id}` ? (
                                   <div className="w-4 h-4 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
                                 ) : (
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
                                 )}
-                                Activate Account
-                              </button>
-                            )}
-                            
-                            {u.status !== 'Suspended' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDropdownAction('suspend-account', u)
-                                }}
-                                disabled={actionLoading === `suspend-account-${u.id}`}
-                                className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {actionLoading === `suspend-account-${u.id}` ? (
-                                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></div>
-                                ) : (
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-                                  </svg>
-                                )}
-                                Suspend Account
-                              </button>
+                                Activate User
+                              </ReadOnlyButton>
                             )}
                           </div>
                         </div>
@@ -612,6 +571,7 @@ Admin - SkillGraph AI`
           </div>
         )}
       </div>
+
     </div>
   )
 }

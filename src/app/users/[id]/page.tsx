@@ -7,13 +7,10 @@ type User = {
   id: string
   name: string | null
   email: string
-  plan: 'Free' | 'Pro' | 'Enterprise'
-  status: 'Active' | 'Inactive' | 'Suspended'
-  joinedDate: string
-  lastActive: string
-  skills: number
-  resumes: number
   active: boolean
+  roles: string[]
+  createdAt: string
+  updatedAt: string
 }
 
 export default function UserProfilePage() {
@@ -22,64 +19,20 @@ export default function UserProfilePage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Sample data - in real app, fetch from API
-  const sampleUsers: User[] = [
-    {
-      id: '1',
-      name: 'Alice Johnson',
-      email: 'alice@example.com',
-      plan: 'Pro',
-      status: 'Active',
-      joinedDate: '2024-01-15',
-      lastActive: '2 hours ago',
-      skills: 24,
-      resumes: 3,
-      active: true
-    },
-    {
-      id: '2',
-      name: 'Bob Smith',
-      email: 'bob@example.com',
-      plan: 'Free',
-      status: 'Active',
-      joinedDate: '2024-02-20',
-      lastActive: '1 day ago',
-      skills: 12,
-      resumes: 1,
-      active: true
-    },
-    {
-      id: '3',
-      name: 'Carol Davis',
-      email: 'carol@example.com',
-      plan: 'Enterprise',
-      status: 'Inactive',
-      joinedDate: '2023-11-10',
-      lastActive: '1 week ago',
-      skills: 45,
-      resumes: 5,
-      active: false
-    },
-    {
-      id: '4',
-      name: 'David Wilson',
-      email: 'david@example.com',
-      plan: 'Pro',
-      status: 'Suspended',
-      joinedDate: '2024-03-05',
-      lastActive: '2 weeks ago',
-      skills: 18,
-      resumes: 2,
-      active: false
-    }
-  ]
-
+  // Initialize with mock data
   useEffect(() => {
+    setLoading(true)
     const userId = params.id as string
-    const foundUser = sampleUsers.find(u => u.id === userId)
-    if (foundUser) {
-      setUser(foundUser)
+    const mockUser = {
+      id: userId,
+      name: 'John Doe',
+      email: 'john@example.com',
+      active: true,
+      roles: ['user'],
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01'
     }
+    setUser(mockUser)
     setLoading(false)
   }, [params.id])
 
@@ -182,23 +135,25 @@ export default function UserProfilePage() {
             <div className="flex items-center gap-4 mb-4">
               <h2 className="text-2xl font-bold text-[var(--text-primary)]">{user.name}</h2>
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                user.status === 'Active' 
+                user.active 
                   ? 'bg-green-100 text-green-800' 
-                  : user.status === 'Suspended'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-gray-100 text-gray-800'
+                  : 'bg-red-100 text-red-800'
               }`}>
-                {user.status}
+                {user.active ? 'Active' : 'Inactive'}
               </span>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                user.plan === 'Pro' 
-                  ? 'bg-purple-100 text-purple-800' 
-                  : user.plan === 'Enterprise'
-                  ? 'bg-purple-200 text-purple-900'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {user.plan}
-              </span>
+              <div className="flex flex-wrap gap-1">
+                {user.roles.map((role, index) => (
+                  <span key={index} className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    role === 'admin' 
+                      ? 'bg-purple-100 text-purple-800' 
+                      : role === 'moderator'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {role}
+                  </span>
+                ))}
+              </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
@@ -207,15 +162,15 @@ export default function UserProfilePage() {
               </div>
               <div>
                 <label className="text-sm text-[var(--text-secondary)]">User ID</label>
-                <p className="text-[var(--text-primary)]">{user.id}</p>
+                <p className="text-[var(--text-primary)] font-mono text-sm">{user.id}</p>
               </div>
               <div>
-                <label className="text-sm text-[var(--text-secondary)]">Joined</label>
-                <p className="text-[var(--text-primary)]">{user.joinedDate}</p>
+                <label className="text-sm text-[var(--text-secondary)]">Created</label>
+                <p className="text-[var(--text-primary)]">{new Date(user.createdAt).toLocaleDateString()}</p>
               </div>
               <div>
-                <label className="text-sm text-[var(--text-secondary)]">Last Active</label>
-                <p className="text-[var(--text-primary)]">{user.lastActive}</p>
+                <label className="text-sm text-[var(--text-secondary)]">Last Updated</label>
+                <p className="text-[var(--text-primary)]">{new Date(user.updatedAt).toLocaleDateString()}</p>
               </div>
             </div>
           </div>
@@ -225,19 +180,19 @@ export default function UserProfilePage() {
       {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-4">
         <div className="metric-card p-6">
-          <div className="text-sm text-[var(--text-secondary)]">Skills</div>
-          <div className="mt-2 text-3xl font-bold">{user.skills}</div>
-          <div className="mt-1 text-xs text-[var(--text-secondary)]">Total skills added</div>
-        </div>
-        <div className="metric-card p-6">
-          <div className="text-sm text-[var(--text-secondary)]">Resumes</div>
-          <div className="mt-2 text-3xl font-bold">{user.resumes}</div>
-          <div className="mt-1 text-xs text-[var(--text-secondary)]">Resumes uploaded</div>
-        </div>
-        <div className="metric-card p-6">
           <div className="text-sm text-[var(--text-secondary)]">Account Status</div>
           <div className="mt-2 text-3xl font-bold">{user.active ? 'Active' : 'Inactive'}</div>
           <div className="mt-1 text-xs text-[var(--text-secondary)]">Current status</div>
+        </div>
+        <div className="metric-card p-6">
+          <div className="text-sm text-[var(--text-secondary)]">Roles</div>
+          <div className="mt-2 text-3xl font-bold">{user.roles.length}</div>
+          <div className="mt-1 text-xs text-[var(--text-secondary)]">Assigned roles</div>
+        </div>
+        <div className="metric-card p-6">
+          <div className="text-sm text-[var(--text-secondary)]">Account Age</div>
+          <div className="mt-2 text-3xl font-bold">{Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24))} days</div>
+          <div className="mt-1 text-xs text-[var(--text-secondary)]">Since registration</div>
         </div>
       </div>
 
@@ -258,33 +213,31 @@ export default function UserProfilePage() {
             Login as User
           </Link>
           
-          {/* Status change buttons based on current status */}
-          {user.status === 'Active' && (
+          {/* Account management buttons */}
+          {!user.active && (
             <button 
-              onClick={handleDeactivateAccount}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-            >
-              Deactivate Account
-            </button>
-          )}
-          
-          {(user.status === 'Inactive' || user.status === 'Suspended') && (
-            <button 
-              onClick={handleActivateAccount}
+              onClick={() => alert('User activated')}
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
             >
-              Activate Account
+              Activate User
             </button>
           )}
           
-          {user.status !== 'Suspended' && (
+          {user.active && (
             <button 
-              onClick={handleSuspendAccount}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              onClick={() => alert('User deactivated')}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
             >
-              Suspend Account
+              Deactivate User
             </button>
           )}
+          
+          <button 
+            onClick={() => alert('User data export functionality would be implemented here')}
+            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            Export User Data
+          </button>
         </div>
       </div>
     </div>
