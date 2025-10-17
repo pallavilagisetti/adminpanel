@@ -1,6 +1,7 @@
 "use client"
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -8,6 +9,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -15,24 +17,11 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // Simulate login
-      if (email && password) {
-        // Store user data in localStorage
-        const userData = {
-          uid: 'admin-123',
-          email: email,
-          displayName: 'Admin User',
-          emailVerified: true,
-          metadata: {
-            lastSignInTime: new Date().toISOString(),
-            creationTime: new Date().toISOString()
-          }
-        }
-        
-        localStorage.setItem('admin-user', JSON.stringify(userData))
+      const result = await login(email, password)
+      if (result.success) {
         router.push('/')
       } else {
-        setError('Please enter email and password')
+        setError(result.error || 'Login failed')
       }
     } catch (error: any) {
       setError(error.message || 'Failed to login')
@@ -56,6 +45,14 @@ export default function LoginPage() {
           <p className="mt-2 text-center text-sm text-gray-400">
             Sign in to your admin account
           </p>
+          <div className="mt-4 p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+            <p className="text-sm text-blue-300 mb-2">Test Accounts:</p>
+            <div className="text-xs text-blue-200 space-y-1">
+              <div><strong>Admin:</strong> pallavigisetti12003@gmail.com / admin123</div>
+              <div><strong>Editor:</strong> lagisettipallavi607@gmail.com / editor123</div>
+              <div><strong>Viewer:</strong> pallusweety67@gmail.com / viewer123</div>
+            </div>
+          </div>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

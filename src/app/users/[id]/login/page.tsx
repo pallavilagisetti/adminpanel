@@ -7,13 +7,10 @@ type User = {
   id: string
   name: string | null
   email: string
-  plan: 'Free' | 'Pro' | 'Enterprise'
-  status: 'Active' | 'Inactive' | 'Suspended'
-  joinedDate: string
-  lastActive: string
-  skills: number
-  resumes: number
   active: boolean
+  roles: string[]
+  createdAt: string
+  updatedAt: string
 }
 
 export default function LoginAsUserPage() {
@@ -23,64 +20,20 @@ export default function LoginAsUserPage() {
   const [loading, setLoading] = useState(true)
   const [confirming, setConfirming] = useState(false)
 
-  // Sample data - in real app, fetch from API
-  const sampleUsers: User[] = [
-    {
-      id: '1',
-      name: 'Alice Johnson',
-      email: 'alice@example.com',
-      plan: 'Pro',
-      status: 'Active',
-      joinedDate: '2024-01-15',
-      lastActive: '2 hours ago',
-      skills: 24,
-      resumes: 3,
-      active: true
-    },
-    {
-      id: '2',
-      name: 'Bob Smith',
-      email: 'bob@example.com',
-      plan: 'Free',
-      status: 'Active',
-      joinedDate: '2024-02-20',
-      lastActive: '1 day ago',
-      skills: 12,
-      resumes: 1,
-      active: true
-    },
-    {
-      id: '3',
-      name: 'Carol Davis',
-      email: 'carol@example.com',
-      plan: 'Enterprise',
-      status: 'Inactive',
-      joinedDate: '2023-11-10',
-      lastActive: '1 week ago',
-      skills: 45,
-      resumes: 5,
-      active: false
-    },
-    {
-      id: '4',
-      name: 'David Wilson',
-      email: 'david@example.com',
-      plan: 'Pro',
-      status: 'Suspended',
-      joinedDate: '2024-03-05',
-      lastActive: '2 weeks ago',
-      skills: 18,
-      resumes: 2,
-      active: false
-    }
-  ]
-
+  // Initialize with mock data
   useEffect(() => {
+    setLoading(true)
     const userId = params.id as string
-    const foundUser = sampleUsers.find(u => u.id === userId)
-    if (foundUser) {
-      setUser(foundUser)
+    const mockUser = {
+      id: userId,
+      name: 'John Doe',
+      email: 'john@example.com',
+      active: true,
+      roles: ['user'],
+      createdAt: '2024-01-01',
+      updatedAt: '2024-01-01'
     }
+    setUser(mockUser)
     setLoading(false)
   }, [params.id])
 
@@ -169,23 +122,25 @@ export default function LoginAsUserPage() {
             <p className="text-[var(--text-secondary)]">{user.email}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                user.status === 'Active' 
+                user.active 
                   ? 'bg-green-100 text-green-800' 
-                  : user.status === 'Suspended'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-gray-100 text-gray-800'
+                  : 'bg-red-100 text-red-800'
               }`}>
-                {user.status}
+                {user.active ? 'Active' : 'Inactive'}
               </span>
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                user.plan === 'Pro' 
-                  ? 'bg-purple-100 text-purple-800' 
-                  : user.plan === 'Enterprise'
-                  ? 'bg-purple-200 text-purple-900'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {user.plan}
-              </span>
+              <div className="flex flex-wrap gap-1">
+                {user.roles.map((role, index) => (
+                  <span key={index} className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    role === 'admin' 
+                      ? 'bg-purple-100 text-purple-800' 
+                      : role === 'moderator'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {role}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

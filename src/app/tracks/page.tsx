@@ -1,9 +1,12 @@
 "use client"
 import { useEffect, useState } from 'react'
+import { ReadOnlyButton } from '@/components/ReadOnlyIndicator'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Track = { id: string; name: string; steps: { id: string; title: string }[]; assignedUserIds: string[] }
 
 export default function TracksPage() {
+  const { canWrite } = useAuth()
   const [tracks, setTracks] = useState<Track[]>([])
   const [name, setName] = useState('')
   const [userIds, setUserIds] = useState('')
@@ -31,7 +34,7 @@ export default function TracksPage() {
       <div className="card p-6 grid gap-3">
         <div className="grid md:grid-cols-3 gap-3">
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Track name" className="input-field" />
-          <button onClick={create} className="btn-secondary">Create Track</button>
+          <ReadOnlyButton onClick={create} permission="users:write" className="btn-secondary">Create Track</ReadOnlyButton>
           <input value={userIds} onChange={e => setUserIds(e.target.value)} placeholder="Assign user IDs (comma separated)" className="input-field" />
         </div>
       </div>
@@ -53,7 +56,7 @@ export default function TracksPage() {
                 <td className="px-6 py-4">{t.steps.map(s => s.title).join(', ') || '—'}</td>
                 <td className="px-6 py-4">{t.assignedUserIds.join(', ') || '—'}</td>
                 <td className="px-6 py-4 text-right">
-                  <button onClick={() => assign(t.id)} className="px-3 py-1.5 rounded-md bg-brand-500 hover:bg-brand-400 text-white text-xs">Assign Users</button>
+                  <ReadOnlyButton onClick={() => assign(t.id)} permission="users:write" className="px-3 py-1.5 rounded-md bg-brand-500 hover:bg-brand-400 text-white text-xs">Assign Users</ReadOnlyButton>
                 </td>
               </tr>
             ))}

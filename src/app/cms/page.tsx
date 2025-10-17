@@ -1,28 +1,33 @@
 "use client"
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import ReadOnlyIndicator, { ReadOnlyButton, ReadOnlyInput, ReadOnlyForm } from '@/components/ReadOnlyIndicator'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Article = { id: string; title: string; slug: string; content: string; updatedAt: number }
 
 export default function CMSPage() {
-  const [articles, setArticles] = useState<Article[]>([])
+  const { canWrite } = useAuth()
+  const [articles, setArticles] = useState<Article[]>([
+    { id: '1', title: 'Getting Started', slug: 'getting-started', content: 'Welcome to our platform...', updatedAt: Date.now() },
+    { id: '2', title: 'FAQ', slug: 'faq', content: 'Frequently asked questions...', updatedAt: Date.now() }
+  ])
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
   const [content, setContent] = useState('')
 
-  useEffect(() => { fetch('/api/cms').then(r => r.json()).then(d => setArticles(d.articles)) }, [])
-
-  const create = async () => {
-    const r = await fetch('/api/cms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, slug, content }) })
-    const d = await r.json(); setArticles([d.article, ...articles]); setTitle(''); setSlug(''); setContent('')
+  const create = () => {
+    const newArticle = { id: Date.now().toString(), title, slug, content, updatedAt: Date.now() }
+    setArticles([newArticle, ...articles])
+    setTitle('')
+    setSlug('')
+    setContent('')
   }
 
-  const update = async (id: string) => {
-    const r = await fetch(`/api/cms/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, slug, content }) })
-    const d = await r.json(); setArticles(prev => prev.map(a => a.id === id ? d.article : a))
+  const update = (id: string) => {
+    setArticles(prev => prev.map(a => a.id === id ? { ...a, title, slug, content, updatedAt: Date.now() } : a))
   }
 
-  const remove = async (id: string) => {
-    await fetch(`/api/cms/${id}`, { method: 'DELETE' })
+  const remove = (id: string) => {
     setArticles(prev => prev.filter(a => a.id !== id))
   }
 
@@ -33,14 +38,22 @@ export default function CMSPage() {
         <p className="text-[var(--text-secondary)] mt-1">Manage support articles</p>
       </div>
 
-      <div className="card p-6 grid gap-3">
-        <div className="grid md:grid-cols-3 gap-3">
-          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="input-field" />
-          <input value={slug} onChange={e => setSlug(e.target.value)} placeholder="Slug" className="input-field" />
-          <button onClick={create} className="btn-secondary">Create</button>
+      <ReadOnlyIndicator permission="cms:write">
+        <div className="card p-6 grid gap-3">
+          <div className="grid md:grid-cols-3 gap-3">
+            <ReadOnlyInput permission="cms:write">
+              <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" className="input-field" />
+            </ReadOnlyInput>
+            <ReadOnlyInput permission="cms:write">
+              <input value={slug} onChange={e => setSlug(e.target.value)} placeholder="Slug" className="input-field" />
+            </ReadOnlyInput>
+            <ReadOnlyButton onClick={create} permission="cms:write" className="btn-secondary">Create</ReadOnlyButton>
+          </div>
+          <ReadOnlyInput permission="cms:write">
+            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Content" className="input-field h-24" />
+          </ReadOnlyInput>
         </div>
-        <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Content" className="input-field h-24" />
-      </div>
+      </ReadOnlyIndicator>
 
       <div className="card overflow-hidden">
         <table className="min-w-full">
@@ -58,8 +71,8 @@ export default function CMSPage() {
                 <td className="px-6 py-4">{a.slug}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex gap-2 justify-end">
-                    <button onClick={() => update(a.id)} className="btn-secondary text-xs">Update</button>
-                    <button onClick={() => remove(a.id)} className="px-3 py-1.5 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs">Delete</button>
+                    <ReadOnlyButton onClick={() => update(a.id)} permission="cms:write" className="btn-secondary text-xs">Update</ReadOnlyButton>
+                    <ReadOnlyButton onClick={() => remove(a.id)} permission="cms:write" className="px-3 py-1.5 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs">Delete</ReadOnlyButton>
                   </div>
                 </td>
               </tr>
