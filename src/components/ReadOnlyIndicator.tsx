@@ -14,7 +14,7 @@ export default function ReadOnlyIndicator({
 }: ReadOnlyIndicatorProps) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = isReadOnly() || (permission && !canWrite(permission))
+  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
   
   if (isDisabled) {
     return (
@@ -48,7 +48,7 @@ export function ReadOnlyButton({
 }) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = isReadOnly() || (permission && !canWrite(permission))
+  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
   
   return (
     <button
@@ -56,7 +56,6 @@ export function ReadOnlyButton({
       onClick={isDisabled ? (e: any) => {
         e.preventDefault()
         e.stopPropagation()
-        // Show a toast or alert that action is not allowed
         alert('You do not have permission to perform this action. Contact an administrator.')
         return false
       } : (e: any) => onClick?.(e)}
@@ -85,7 +84,7 @@ export function ReadOnlyInput({
 }) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = isReadOnly() || (permission && !canWrite(permission))
+  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
   
   return (
     <div className={`relative ${className}`}>
@@ -110,7 +109,7 @@ export function ViewerRestricted({
 }) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = isReadOnly() || (permission && !canWrite(permission))
+  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
   
   if (isDisabled) {
     return (
@@ -154,7 +153,7 @@ export function ReadOnlyForm({
 }) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = isReadOnly() || (permission && !canWrite(permission))
+  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
   
   const handleSubmit = (e: any) => {
     if (isDisabled) {
