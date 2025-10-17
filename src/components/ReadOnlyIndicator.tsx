@@ -14,8 +14,8 @@ export default function ReadOnlyIndicator({
 }: ReadOnlyIndicatorProps) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
-  
+  const isDisabled: boolean = !!(isReadOnly() || (!!permission && !canWrite(permission)))
+
   if (isDisabled) {
     return (
       <div className={`relative ${className}`}>
@@ -48,8 +48,8 @@ export function ReadOnlyButton({
 }) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
-  
+  const isDisabled: boolean = !!(isReadOnly() || (!!permission && !canWrite(permission)))
+
   return (
     <button
       {...props}
@@ -59,7 +59,7 @@ export function ReadOnlyButton({
         alert('You do not have permission to perform this action. Contact an administrator.')
         return false
       } : (e: any) => onClick?.(e)}
-      disabled={isDisabled}
+      disabled={!!isDisabled}
       className={`${className} ${isDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
       style={isDisabled ? { pointerEvents: 'none' } : {}}
     >
@@ -84,8 +84,8 @@ export function ReadOnlyInput({
 }) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
-  
+  const isDisabled: boolean = !!(isReadOnly() || (!!permission && !canWrite(permission)))
+
   return (
     <div className={`relative ${className}`}>
       {children}
@@ -109,8 +109,8 @@ export function ViewerRestricted({
 }) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
-  
+  const isDisabled: boolean = !!(isReadOnly() || (!!permission && !canWrite(permission)))
+
   if (isDisabled) {
     return (
       <div className={`relative ${className}`}>
@@ -153,8 +153,8 @@ export function ReadOnlyForm({
 }) {
   const { isReadOnly, canWrite } = useAuth()
   
-  const isDisabled = Boolean(isReadOnly() || (permission && !canWrite(permission)))
-  
+  const isDisabled: boolean = !!(isReadOnly() || (!!permission && !canWrite(permission)))
+
   const handleSubmit = (e: any) => {
     if (isDisabled) {
       e.preventDefault()
