@@ -1,22 +1,19 @@
 "use client"
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-
-interface User {
-  uid: string
-  email: string
-  displayName?: string
-  emailVerified: boolean
-  metadata: {
-    lastSignInTime?: string
-    creationTime?: string
-  }
-}
+import { AuthService, JWTManager, User } from '@/lib/auth'
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
+  hasPermission: (permission: string) => boolean
+  hasAnyPermission: (permissions: string[]) => boolean
+  hasAllPermissions: (permissions: string[]) => boolean
+  getUserRole: () => string | null
+  canWrite: (permission: string) => boolean
+  canDelete: (permission: string) => boolean
+  isReadOnly: () => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -26,47 +23,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is already logged in (from localStorage)
-    if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('admin-user')
-      if (savedUser) {
-        setUser(JSON.parse(savedUser))
-      }
-    }
+    // Check if user is already logged in with JWT
+    const currentUser = JWTManager.getCurrentUser()
+    setUser(currentUser)
     setLoading(false)
   }, [])
 
   const login = async (email: string, password: string) => {
-    // Simulate login - in real app, this would call Firebase
-    const mockUser: User = {
-      uid: 'admin-123',
-      email: email,
-      displayName: 'Admin User',
-      emailVerified: true,
-      metadata: {
-        lastSignInTime: new Date().toISOString(),
-        creationTime: new Date().toISOString()
+    setLoading(true)
+    try {
+      const result = await AuthService.login(email, password)
+      if (result.success && result.user) {
+        setUser(result.user)
+        return { success: true }
+      } else {
+        return { success: false, error: result.error || 'Login failed' }
       }
-    }
-    
-    setUser(mockUser)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('admin-user', JSON.stringify(mockUser))
+    } catch (error) {
+      return { success: false, error: 'An error occurred during login' }
+    } finally {
+      setLoading(false)
     }
   }
 
   const logout = async () => {
+    await AuthService.logout()
     setUser(null)
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('admin-user')
-    }
+  }
+
+  const hasPermission = (permission: string): boolean => {
+    return AuthService.hasPermission(permission)
+  }
+
+  const hasAnyPermission = (permissions: string[]): boolean => {
+    return AuthService.hasAnyPermission(permissions)
+  }
+
+  const hasAllPermissions = (permissions: string[]): boolean => {
+    return AuthService.hasAllPermissions(permissions)
+  }
+
+  const getUserRole = (): string | null => {
+    return AuthService.getUserRole()
+  }
+
+  const canWrite = (permission: string): boolean => {
+    return AuthService.canWrite(permission)
+  }
+
+  const canDelete = (permission: string): boolean => {
+    return AuthService.canDelete(permission)
+  }
+
+  const isReadOnly = (): boolean => {
+    return AuthService.isReadOnly()
   }
 
   const value = {
     user,
     loading,
     login,
-    logout
+    logout,
+    hasPermission,
+    hasAnyPermission,
+    hasAllPermissions,
+    getUserRole,
+    canWrite,
+    canDelete,
+    isReadOnly
   }
 
   return (

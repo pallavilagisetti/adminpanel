@@ -11,7 +11,22 @@ export default function SkillsDashboardPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('popular')
 
   useEffect(() => {
-    fetch('/api/skills').then(r => r.json()).then(d => { setTopSkills(d.topSkills); setTopMissing(d.topMissing); setErrors(d.errors) })
+    // Mock data for skills
+    setTopSkills([
+      { skill: 'JavaScript', count: 1234 },
+      { skill: 'Python', count: 987 },
+      { skill: 'React', count: 876 },
+      { skill: 'Node.js', count: 765 },
+      { skill: 'TypeScript', count: 654 }
+    ])
+    setTopMissing([
+      { skill: 'Machine Learning', count: 234 },
+      { skill: 'DevOps', count: 198 },
+      { skill: 'Cloud Computing', count: 187 },
+      { skill: 'Data Science', count: 176 },
+      { skill: 'Cybersecurity', count: 165 }
+    ])
+    setErrors([])
   }, [])
 
   const skillsTracked = topSkills.length + topMissing.length

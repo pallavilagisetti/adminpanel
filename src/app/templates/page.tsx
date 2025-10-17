@@ -1,5 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react'
+import { ReadOnlyButton } from '@/components/ReadOnlyIndicator'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Template = {
   id: string
@@ -10,6 +12,7 @@ type Template = {
 }
 
 export default function TemplatesPage() {
+  const { canWrite } = useAuth()
   const [templates, setTemplates] = useState<Template[]>([])
   const [name, setName] = useState('')
   const [type, setType] = useState<'SOFA' | 'KYS'>('SOFA')
@@ -56,7 +59,7 @@ export default function TemplatesPage() {
             <option value="SOFA">SOFA</option>
             <option value="KYS">KYS</option>
           </select>
-          <button onClick={create} className="btn-secondary">Create Template</button>
+          <ReadOnlyButton onClick={create} permission="cms:write" className="btn-secondary">Create Template</ReadOnlyButton>
         </div>
         <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Template body (JSON) or DSL" className="input-field h-24" />
       </div>
@@ -79,9 +82,9 @@ export default function TemplatesPage() {
                 <td className="px-6 py-4">v{t.activeVersion}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex gap-2 justify-end">
-                    <button onClick={() => addVersion(t.id)} className="px-3 py-1.5 rounded-md bg-brand-500 hover:bg-brand-400 text-white text-xs">Add Version</button>
-                    <button onClick={() => rollback(t.id, Math.max(1, t.activeVersion - 1))} className="px-3 py-1.5 rounded-md bg-white/10 border border-white/10 text-white text-xs">Rollback</button>
-                    <button onClick={() => remove(t.id)} className="px-3 py-1.5 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs">Delete</button>
+                    <ReadOnlyButton onClick={() => addVersion(t.id)} permission="cms:write" className="px-3 py-1.5 rounded-md bg-brand-500 hover:bg-brand-400 text-white text-xs">Add Version</ReadOnlyButton>
+                    <ReadOnlyButton onClick={() => rollback(t.id, Math.max(1, t.activeVersion - 1))} permission="cms:write" className="px-3 py-1.5 rounded-md bg-white/10 border border-white/10 text-white text-xs">Rollback</ReadOnlyButton>
+                    <ReadOnlyButton onClick={() => remove(t.id)} permission="cms:write" className="px-3 py-1.5 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs">Delete</ReadOnlyButton>
                   </div>
                 </td>
               </tr>

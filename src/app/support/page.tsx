@@ -1,30 +1,34 @@
 "use client"
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { ReadOnlyButton } from '@/components/ReadOnlyIndicator'
+import { useAuth } from '@/contexts/AuthContext'
 
 type Ticket = { id: string; subject: string; requesterEmail: string; status: 'open' | 'pending' | 'resolved'; createdAt: number }
 
 export default function SupportPage() {
-  const [tickets, setTickets] = useState<Ticket[]>([])
+  const { canWrite } = useAuth()
+  const [tickets, setTickets] = useState<Ticket[]>([
+    { id: '1', subject: 'Login Issues', requesterEmail: 'user@example.com', status: 'open', createdAt: Date.now() },
+    { id: '2', subject: 'Feature Request', requesterEmail: 'admin@example.com', status: 'pending', createdAt: Date.now() }
+  ])
   const [subject, setSubject] = useState('')
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'All' | 'open' | 'pending' | 'resolved'>('All')
 
-  useEffect(() => { fetch('/api/support').then(r => r.json()).then(d => setTickets(d.tickets)) }, [])
-
   const filtered = useMemo(() => status === 'All' ? tickets : tickets.filter(t => t.status === status), [tickets, status])
 
-  const create = async () => {
-    const r = await fetch('/api/support', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, requesterEmail: email }) })
-    const d = await r.json(); setTickets([d.ticket, ...tickets]); setSubject(''); setEmail('')
+  const create = () => {
+    const newTicket = { id: Date.now().toString(), subject, requesterEmail: email, status: 'open' as const, createdAt: Date.now() }
+    setTickets([newTicket, ...tickets])
+    setSubject('')
+    setEmail('')
   }
 
-  const setTicketStatus = async (id: string, next: 'open' | 'pending' | 'resolved') => {
-    const r = await fetch(`/api/support/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) })
-    const d = await r.json(); setTickets(prev => prev.map(t => t.id === id ? d.ticket : t))
+  const setTicketStatus = (id: string, next: 'open' | 'pending' | 'resolved') => {
+    setTickets(prev => prev.map(t => t.id === id ? { ...t, status: next } : t))
   }
 
-  const remove = async (id: string) => {
-    await fetch(`/api/support/${id}`, { method: 'DELETE' })
+  const remove = (id: string) => {
     setTickets(prev => prev.filter(t => t.id !== id))
   }
 
@@ -46,7 +50,7 @@ export default function SupportPage() {
       <div className="card p-6 grid md:grid-cols-3 gap-3">
         <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" className="input-field" />
         <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Requester Email" className="input-field" />
-        <button onClick={create} className="btn-secondary">Create Ticket</button>
+        <ReadOnlyButton onClick={create} permission="notifications:write" className="btn-secondary">Create Ticket</ReadOnlyButton>
       </div>
 
       <div className="card overflow-hidden">
@@ -67,10 +71,10 @@ export default function SupportPage() {
                 <td className="px-6 py-4">{t.status}</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex gap-2 justify-end">
-                    <button onClick={() => setTicketStatus(t.id, 'open')} className="btn-secondary text-xs">Open</button>
-                    <button onClick={() => setTicketStatus(t.id, 'pending')} className="btn-secondary text-xs">Pending</button>
-                    <button onClick={() => setTicketStatus(t.id, 'resolved')} className="btn-secondary text-xs">Resolve</button>
-                    <button onClick={() => remove(t.id)} className="px-3 py-1.5 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs">Delete</button>
+                    <ReadOnlyButton onClick={() => setTicketStatus(t.id, 'open')} permission="notifications:write" className="btn-secondary text-xs">Open</ReadOnlyButton>
+                    <ReadOnlyButton onClick={() => setTicketStatus(t.id, 'pending')} permission="notifications:write" className="btn-secondary text-xs">Pending</ReadOnlyButton>
+                    <ReadOnlyButton onClick={() => setTicketStatus(t.id, 'resolved')} permission="notifications:write" className="btn-secondary text-xs">Resolve</ReadOnlyButton>
+                    <ReadOnlyButton onClick={() => remove(t.id)} permission="notifications:write" className="px-3 py-1.5 rounded-md bg-red-500 hover:bg-red-600 text-white text-xs">Delete</ReadOnlyButton>
                   </div>
                 </td>
               </tr>

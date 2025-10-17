@@ -1,10 +1,13 @@
 "use client"
 import { useMemo, useState } from 'react'
+import { ReadOnlyButton } from '@/components/ReadOnlyIndicator'
+import { useAuth } from '@/contexts/AuthContext'
 
 type HistoryItem = { id: string; title: string; tags: string[]; recipients: number; sentAt?: string; openRate?: string; status: 'Sent'|'Scheduled' }
 type ReminderItem = { id: string; title: string; description: string; cadence: 'Event-based'|'Weekly'|'Monthly'; enabled: boolean }
 
 export default function NotificationsPage() {
+  const { canWrite } = useAuth()
   const [activeTab, setActiveTab] = useState<'compose'|'history'|'reminders'>('compose')
   const [title, setTitle] = useState('')
   const [audience, setAudience] = useState('All Users (12,847)')
@@ -157,8 +160,8 @@ export default function NotificationsPage() {
             </div>
           </div>
           <div className="mt-6 flex items-center gap-3">
-            <button onClick={sendNow} className="btn-primary">Send Notification</button>
-            <button onClick={scheduleLater} className="btn-secondary">Schedule</button>
+            <ReadOnlyButton onClick={sendNow} permission="notifications:write" className="btn-primary">Send Notification</ReadOnlyButton>
+            <ReadOnlyButton onClick={scheduleLater} permission="notifications:write" className="btn-secondary">Schedule</ReadOnlyButton>
           </div>
         </section>
       )}
@@ -195,7 +198,7 @@ export default function NotificationsPage() {
         <section className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Automated Reminders</h2>
-            <button onClick={() => setShowAdd(true)} className="px-3 py-2 rounded-md text-sm bg-[var(--accent)] text-white">+ Add Reminder</button>
+            <ReadOnlyButton onClick={() => setShowAdd(true)} permission="notifications:write" className="px-3 py-2 rounded-md text-sm bg-[var(--accent)] text-white">+ Add Reminder</ReadOnlyButton>
           </div>
           <div className="space-y-3">
             {reminders.map(rem => (
@@ -245,7 +248,7 @@ export default function NotificationsPage() {
                 </div>
                 <div className="mt-6 flex justify-end gap-2">
                   <button onClick={() => setShowAdd(false)} className="btn-secondary">Cancel</button>
-                  <button onClick={saveReminder} className="btn-primary">Save</button>
+                  <ReadOnlyButton onClick={saveReminder} permission="notifications:write" className="btn-primary">Save</ReadOnlyButton>
                 </div>
               </div>
             </div>

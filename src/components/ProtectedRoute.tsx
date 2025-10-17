@@ -1,40 +1,63 @@
 "use client"
+import React, { ReactNode, useEffect } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
+  children: ReactNode
+  requiredPermissions?: string[]
+  fallbackPath?: string
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+export default function ProtectedRoute({ 
+  children, 
+  requiredPermissions = [], 
+  fallbackPath = '/access-denied' 
+}: ProtectedRouteProps) {
+  const { user, loading, hasAllPermissions } = useAuth()
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    // Check if user is logged in
-    const savedUser = localStorage.getItem('admin-user')
-    if (savedUser) {
-      setIsAuthenticated(true)
-    } else {
+    if (loading) return
+
+    if (!user) {
       router.push('/login')
+      return
     }
-    setLoading(false)
-  }, [router])
+
+    // Check if user has required permissions
+    if (requiredPermissions.length > 0) {
+      const hasRequiredPermissions = hasAllPermissions(requiredPermissions)
+      
+      if (!hasRequiredPermissions) {
+        router.push(fallbackPath as any)
+        return
+      }
+    }
+  }, [user, loading, requiredPermissions, hasAllPermissions, router, fallbackPath])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--accent)] mx-auto"></div>
-          <p className="mt-4 text-[var(--text-secondary)]">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-white">Loading...</p>
         </div>
       </div>
     )
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null
+  }
+
+  // Check permissions if required
+  if (requiredPermissions.length > 0) {
+    const hasRequiredPermissions = hasAllPermissions(requiredPermissions)
+    
+    if (!hasRequiredPermissions) {
+      return null
+    }
   }
 
   return <>{children}</>

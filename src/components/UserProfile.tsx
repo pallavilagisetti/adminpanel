@@ -1,31 +1,15 @@
 "use client"
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-
-interface User {
-  uid: string
-  email: string
-  displayName?: string
-  emailVerified: boolean
-  metadata: {
-    lastSignInTime?: string
-    creationTime?: string
-  }
-}
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function UserProfile() {
-  const [user, setUser] = useState<User | null>(null)
+  const { user, logout, getUserRole } = useAuth()
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   useEffect(() => {
-    // Get user from localStorage
-    const savedUser = localStorage.getItem('admin-user')
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
-    }
-
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false)
@@ -38,8 +22,8 @@ export default function UserProfile() {
     }
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin-user')
+  const handleLogout = async () => {
+    await logout()
     router.push('/login')
   }
 
@@ -56,10 +40,13 @@ export default function UserProfile() {
         </div>
         <div className="text-left">
           <div className="text-sm font-medium text-[var(--text-primary)]">
-            {user.displayName || 'Admin User'}
+            {user.name}
           </div>
           <div className="text-xs text-[var(--text-secondary)]">
             {user.email}
+          </div>
+          <div className="text-xs text-[var(--accent)] font-medium">
+            {getUserRole()}
           </div>
         </div>
         <svg className="w-4 h-4 text-[var(--text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,16 +64,13 @@ export default function UserProfile() {
                   <span className="font-medium">Email:</span> {user.email}
                 </div>
                 <div>
-                  <span className="font-medium">UID:</span> {user.uid}
+                  <span className="font-medium">Name:</span> {user.name}
                 </div>
                 <div>
-                  <span className="font-medium">Last Sign In:</span> {user.metadata.lastSignInTime ? new Date(user.metadata.lastSignInTime).toLocaleString() : 'N/A'}
+                  <span className="font-medium">Role:</span> {getUserRole()}
                 </div>
                 <div>
-                  <span className="font-medium">Account Created:</span> {user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleString() : 'N/A'}
-                </div>
-                <div>
-                  <span className="font-medium">Email Verified:</span> {user.emailVerified ? 'Yes' : 'No'}
+                  <span className="font-medium">User ID:</span> {user.id}
                 </div>
               </div>
             </div>
