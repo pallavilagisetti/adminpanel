@@ -21,11 +21,11 @@ export default function HomePage() {
   const handleGenerateReport = () => {
     // Generate comprehensive analytics report
     const reportData = {
-      title: `${process.env.NEXT_PUBLIC_APP_NAME || 'SkillGraph AI'} - Comprehensive Analytics Report`,
+      title: 'SkillGraph AI - Comprehensive Analytics Report',
       generatedAt: new Date().toISOString(),
       period: "Last 30 Days",
-      appVersion: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
-      environment: process.env.NEXT_PUBLIC_APP_ENVIRONMENT || 'development',
+      appVersion: '1.0.0',
+      environment: 'production',
       summary: {
         totalUsers: 1234,
         activeUsers: 567,
